@@ -14,6 +14,13 @@ type MenuItem = {
 
 const items: MenuItem[] = [
   {
+    href: "/",
+    label: "בית",
+    icon: "🏠",
+    iconBg: "bg-gradient-to-br from-rose-400/40 to-pink-500/30 ring-rose-300/40 shadow-rose-500/20",
+    activeRing: "ring-rose-300/50 shadow-rose-500/20",
+  },
+  {
     href: "/school",
     label: "בית ספר",
     icon: "📚",
