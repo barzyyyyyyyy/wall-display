@@ -1,34 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import PageHeader from "@/app/components/PageHeader";
 import {
-  loadShopping,
+  DEFAULT_SHOPPING,
   newId,
-  saveShopping,
   type ShoppingItem,
   type ShoppingState,
 } from "@/lib/shopping";
+import { useSharedState } from "@/lib/use-shared-state";
 
 export default function ShoppingPage() {
-  const [state, setState] = useState<ShoppingState>({
-    items: [],
-    common: [],
-  });
-  const [loaded, setLoaded] = useState(false);
+  const { state, setState, loaded } = useSharedState<ShoppingState>(
+    "shopping",
+    DEFAULT_SHOPPING,
+  );
   const [input, setInput] = useState("");
   const [editingPile, setEditingPile] = useState(false);
   const [newCommon, setNewCommon] = useState("");
   const [showAddCommon, setShowAddCommon] = useState(false);
-
-  useEffect(() => {
-    setState(loadShopping());
-    setLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (loaded) saveShopping(state);
-  }, [state, loaded]);
 
   const addItem = (text: string) => {
     const t = text.trim();
@@ -84,7 +74,7 @@ export default function ShoppingPage() {
               setInput("");
             }}
             disabled={!input.trim()}
-            className="rounded-2xl bg-white px-5 py-3 text-lg font-medium text-neutral-950 hover:bg-white/90 disabled:opacity-40"
+            className="rounded-2xl bg-gradient-to-br from-emerald-400 to-green-500 px-5 py-3 text-lg font-bold text-emerald-950 shadow-md shadow-emerald-500/30 transition-all hover:from-emerald-300 hover:to-green-400 active:scale-95 disabled:opacity-40"
           >
             הוסף
           </button>
@@ -101,13 +91,17 @@ export default function ShoppingPage() {
         </div>
 
         <ul className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
-          {state.items.length === 0 && (
+          {loaded && state.items.length === 0 && (
             <li className="flex flex-1 items-center justify-center text-white/40">
               אין פריטים. לחץ על אחד למטה כדי להוסיף.
             </li>
           )}
           {state.items.map((item) => (
-            <ItemRow key={item.id} item={item} onRemove={() => removeItem(item.id)} />
+            <ItemRow
+              key={item.id}
+              item={item}
+              onRemove={() => removeItem(item.id)}
+            />
           ))}
         </ul>
       </section>
@@ -196,7 +190,15 @@ function ItemRow({
         aria-label="הסר"
         className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white/60 hover:bg-white/20 hover:text-white"
       >
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+        <svg
+          viewBox="0 0 24 24"
+          width="16"
+          height="16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        >
           <path d="M6 6l12 12M18 6l-12 12" />
         </svg>
       </button>
@@ -222,7 +224,15 @@ function CommonChip({
         onClick={onRemove}
         className="flex items-center gap-1.5 rounded-full bg-red-500/15 px-4 py-2 text-base text-red-200 ring-1 ring-red-400/30 hover:bg-red-500/25"
       >
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+        <svg
+          viewBox="0 0 24 24"
+          width="14"
+          height="14"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        >
           <path d="M6 6l12 12M18 6l-12 12" />
         </svg>
         <span>{name}</span>
@@ -233,7 +243,7 @@ function CommonChip({
     <button
       type="button"
       onClick={onAdd}
-      className="rounded-full bg-white/10 px-4 py-2 text-base text-white ring-1 ring-white/10 hover:bg-white/20 active:bg-white/30"
+      className="rounded-full bg-emerald-400/15 px-4 py-2 text-base text-emerald-50 ring-1 ring-emerald-300/30 transition-all hover:bg-emerald-400/25 active:scale-95"
     >
       {name}
     </button>

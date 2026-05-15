@@ -1,36 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import PageHeader from "@/app/components/PageHeader";
 import {
   buildQueue,
-  loadDishes,
+  DEFAULT_DISHES,
   MAX_PATTERN,
-  saveDishes,
   type DishesPerson,
   type DishesState,
 } from "@/lib/dishes";
+import { useSharedState } from "@/lib/use-shared-state";
 import { newId } from "@/lib/util";
 
 export default function DishesPage() {
-  const [state, setState] = useState<DishesState>({
-    pattern: [],
-    queue: [],
-    highlight: false,
-  });
-  const [loaded, setLoaded] = useState(false);
+  const { state, setState } = useSharedState<DishesState>(
+    "dishes",
+    DEFAULT_DISHES,
+  );
   const [input, setInput] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
-
-  useEffect(() => {
-    setState(loadDishes());
-    setLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (loaded) saveDishes(state);
-  }, [state, loaded]);
 
   // ---------- pattern operations (also reset the big list) ----------
 
@@ -144,7 +133,6 @@ export default function DishesPage() {
       <PageHeader title="תור מדיח 🍽️" accent="sky" />
 
       <div className="flex min-h-0 flex-1 gap-4">
-        {/* RIGHT (RTL first): pattern editor */}
         <aside className="flex w-72 shrink-0 flex-col rounded-3xl bg-gradient-to-b from-sky-500/15 to-sky-500/5 ring-1 ring-sky-300/20 p-4 shadow-xl shadow-sky-900/20">
           <div className="mb-3 flex items-center justify-between px-1">
             <h2 className="flex items-center gap-2 text-lg font-bold text-sky-100">
@@ -263,9 +251,7 @@ export default function DishesPage() {
           </ol>
         </aside>
 
-        {/* LEFT (RTL second): hero + main editable list */}
         <section className="flex min-w-0 flex-1 flex-col gap-4">
-          {/* Hero: next name + toggle + advance */}
           <div
             className={`flex shrink-0 flex-col items-center justify-center rounded-3xl ring-1 p-6 transition-all duration-500 ${
               state.highlight
@@ -321,7 +307,6 @@ export default function DishesPage() {
             </div>
           </div>
 
-          {/* Main editable big list */}
           <div className="flex min-h-0 flex-1 flex-col rounded-3xl bg-white/5 ring-1 ring-white/10 p-5">
             <div className="mb-3 flex items-center justify-between px-1">
               <h3 className="flex items-center gap-2 text-lg font-bold text-white/85">

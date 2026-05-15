@@ -5,9 +5,7 @@ export type ShoppingState = {
   common: string[];
 };
 
-const KEY = "wall-display.shopping";
-
-const DEFAULT_COMMON = [
+export const DEFAULT_COMMON = [
   "חלב",
   "לחם",
   "ביצים",
@@ -22,26 +20,9 @@ const DEFAULT_COMMON = [
   "סוכר",
 ];
 
-const EMPTY: ShoppingState = { items: [], common: DEFAULT_COMMON };
-
-export function loadShopping(): ShoppingState {
-  if (typeof window === "undefined") return EMPTY;
-  try {
-    const raw = window.localStorage.getItem(KEY);
-    if (!raw) return EMPTY;
-    const parsed = JSON.parse(raw) as ShoppingState;
-    return {
-      items: parsed.items ?? [],
-      common: parsed.common ?? DEFAULT_COMMON,
-    };
-  } catch {
-    return EMPTY;
-  }
-}
-
-export function saveShopping(state: ShoppingState) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(KEY, JSON.stringify(state));
-}
+export const DEFAULT_SHOPPING: ShoppingState = {
+  items: [],
+  common: DEFAULT_COMMON,
+};
 
 export { newId } from "./util";

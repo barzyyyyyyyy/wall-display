@@ -2,28 +2,22 @@
 
 import { useCallback, useEffect, useState } from "react";
 import PageHeader from "@/app/components/PageHeader";
-import {
-  clearSlot,
-  loadSchoolConfig,
-  saveSchoolConfig,
-} from "@/lib/storage";
+import { DEFAULT_SCHOOL_CONFIG } from "@/lib/storage";
 import type {
   Schedule,
   ScheduleResponse,
   SchoolConfig,
   Sibling,
 } from "@/lib/types";
+import { useSharedState } from "@/lib/use-shared-state";
 import SiblingColumn from "./SiblingColumn";
 import LoginDialog from "./LoginDialog";
 
 type Slot = "left" | "right";
 
 export default function SchoolPage() {
-  const [config, setConfig] = useState<SchoolConfig>({
-    left: null,
-    right: null,
-  });
-  const [loaded, setLoaded] = useState(false);
+  const { state: config, setState: setConfig, loaded } =
+    useSharedState<SchoolConfig>("school", DEFAULT_SCHOOL_CONFIG);
   const [editing, setEditing] = useState<Slot | null>(null);
   const [schedules, setSchedules] = useState<Record<Slot, Schedule | null>>({
     left: null,
@@ -37,11 +31,6 @@ export default function SchoolPage() {
     left: false,
     right: false,
   });
-
-  useEffect(() => {
-    setConfig(loadSchoolConfig());
-    setLoaded(true);
-  }, []);
 
   const fetchSchedule = useCallback(async (slot: Slot, sibling: Sibling) => {
     setLoading((s) => ({ ...s, [slot]: true }));
@@ -78,16 +67,12 @@ export default function SchoolPage() {
   }, [loaded, config.left, config.right, fetchSchedule]);
 
   const handleSave = (slot: Slot, sibling: Sibling) => {
-    const next = { ...config, [slot]: sibling };
-    setConfig(next);
-    saveSchoolConfig(next);
+    setConfig((c) => ({ ...c, [slot]: sibling }));
     setEditing(null);
   };
 
   const handleRemove = (slot: Slot) => {
-    clearSlot(slot);
-    const next = { ...config, [slot]: null };
-    setConfig(next);
+    setConfig((c) => ({ ...c, [slot]: null }));
     setSchedules((s) => ({ ...s, [slot]: null }));
     setErrors((s) => ({ ...s, [slot]: null }));
   };
