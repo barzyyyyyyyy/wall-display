@@ -27,7 +27,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#162033",
+  themeColor: "#26304a",
 };
 
 export default function RootLayout({
@@ -39,7 +39,10 @@ export default function RootLayout({
       dir="rtl"
       className={`${heebo.variable} h-full antialiased`}
     >
-      <body className="relative flex h-full overflow-hidden text-neutral-100 select-none overscroll-none">
+      <body
+        className="relative flex h-full overflow-hidden text-neutral-100 select-none overscroll-none"
+        style={{ backgroundColor: "#26304a" }}
+      >
         <Background />
         <SideMenu />
         {children}
