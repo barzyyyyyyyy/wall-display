@@ -1,6 +1,11 @@
 import { newId } from "./util";
 
-export type DishesPerson = { id: string; name: string };
+export type DishesPerson = {
+  id: string;
+  name: string;
+  phone?: string; // E.164 format, e.g. "+972501234567"
+  callmebot?: string; // CallMeBot API key (digits)
+};
 
 export type DishesState = {
   pattern: DishesPerson[];
@@ -21,7 +26,13 @@ export function buildQueue(pattern: DishesPerson[]): DishesPerson[] {
   if (pattern.length === 0) return [];
   const out: DishesPerson[] = [];
   for (let i = 0; i < QUEUE_LENGTH; i++) {
-    out.push({ id: newId(), name: pattern[i % pattern.length].name });
+    const p = pattern[i % pattern.length];
+    out.push({
+      id: newId(),
+      name: p.name,
+      phone: p.phone,
+      callmebot: p.callmebot,
+    });
   }
   return out;
 }

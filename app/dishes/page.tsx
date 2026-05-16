@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import PageHeader from "@/app/components/PageHeader";
 import {
   buildQueue,
@@ -12,14 +12,32 @@ import {
 import { useSharedState } from "@/lib/use-shared-state";
 import { newId } from "@/lib/util";
 
+type Toast = { kind: "success" | "error"; text: string };
+
 export default function DishesPage() {
   const { state, setState } = useSharedState<DishesState>(
     "dishes",
     DEFAULT_DISHES,
   );
   const [input, setInput] = useState("");
+  // Edit state — for the pattern editor we capture name + phone + key.
+  // For queue rows we only edit `editName`.
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState("");
+  const [editingTarget, setEditingTarget] = useState<"pattern" | "queue" | null>(
+    null,
+  );
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editKey, setEditKey] = useState("");
+
+  const [sending, setSending] = useState(false);
+  const [toast, setToast] = useState<Toast | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   // ---------- pattern operations (also reset the big list) ----------
 
@@ -52,17 +70,6 @@ export default function DishesPage() {
     });
   };
 
-  const renameInPattern = (id: string, name: string) => {
-    const t = name.trim();
-    if (!t) return;
-    setState((s) => {
-      const pattern = s.pattern.map((p) =>
-        p.id === id ? { ...p, name: t } : p,
-      );
-      return { ...s, pattern, queue: buildQueue(pattern) };
-    });
-  };
-
   const advance = () => {
     setState((s) => {
       if (s.pattern.length < 2) return s;
@@ -72,7 +79,7 @@ export default function DishesPage() {
     });
   };
 
-  // ---------- queue-only operations (do NOT touch pattern) ----------
+  // ---------- queue-only operations ----------
 
   const removeFromQueue = (id: string) => {
     setState((s) => ({ ...s, queue: s.queue.filter((p) => p.id !== id) }));
@@ -90,32 +97,58 @@ export default function DishesPage() {
     });
   };
 
-  const renameInQueue = (id: string, name: string) => {
-    const t = name.trim();
-    if (!t) return;
-    setState((s) => ({
-      ...s,
-      queue: s.queue.map((p) => (p.id === id ? { ...p, name: t } : p)),
-    }));
-  };
+  // ---------- edit lifecycle ----------
 
-  // ---------- shared edit lifecycle ----------
-
-  const startEdit = (p: DishesPerson) => {
+  const startEditPattern = (p: DishesPerson) => {
     setEditingId(p.id);
-    setEditValue(p.name);
+    setEditingTarget("pattern");
+    setEditName(p.name);
+    setEditPhone(p.phone ?? "");
+    setEditKey(p.callmebot ?? "");
   };
-  const commitEdit = (target: "pattern" | "queue") => {
-    if (editingId) {
-      if (target === "pattern") renameInPattern(editingId, editValue);
-      else renameInQueue(editingId, editValue);
+
+  const startEditQueue = (p: DishesPerson) => {
+    setEditingId(p.id);
+    setEditingTarget("queue");
+    setEditName(p.name);
+  };
+
+  const commitEdit = () => {
+    if (!editingId || !editingTarget) {
+      cancelEdit();
+      return;
     }
-    setEditingId(null);
-    setEditValue("");
+    const t = editName.trim();
+    if (!t) {
+      cancelEdit();
+      return;
+    }
+    if (editingTarget === "pattern") {
+      const phone = editPhone.trim() || undefined;
+      const key = editKey.trim() || undefined;
+      setState((s) => {
+        const pattern = s.pattern.map((p) =>
+          p.id === editingId
+            ? { ...p, name: t, phone, callmebot: key }
+            : p,
+        );
+        return { ...s, pattern, queue: buildQueue(pattern) };
+      });
+    } else {
+      setState((s) => ({
+        ...s,
+        queue: s.queue.map((p) => (p.id === editingId ? { ...p, name: t } : p)),
+      }));
+    }
+    cancelEdit();
   };
+
   const cancelEdit = () => {
     setEditingId(null);
-    setEditValue("");
+    setEditingTarget(null);
+    setEditName("");
+    setEditPhone("");
+    setEditKey("");
   };
 
   const toggleHighlight = () => {
@@ -126,7 +159,48 @@ export default function DishesPage() {
     setState((s) => ({ ...s, queue: buildQueue(s.pattern) }));
   };
 
+  const sendReminder = async () => {
+    const target = state.queue[0];
+    if (!target) return;
+    if (!target.phone || !target.callmebot) {
+      setToast({
+        kind: "error",
+        text: `אין מספר/מפתח עבור ${target.name}`,
+      });
+      return;
+    }
+    setSending(true);
+    try {
+      const res = await fetch("/api/dishes/remind", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          phone: target.phone,
+          apiKey: target.callmebot,
+          message: `היי ${target.name}! זה תורך לפנות את המדיח 🍽️`,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+      };
+      if (!data.ok) {
+        setToast({ kind: "error", text: data.error || "שגיאה בשליחה" });
+      } else {
+        setToast({ kind: "success", text: `תזכורת נשלחה ל${target.name} ✓` });
+      }
+    } catch (e) {
+      setToast({
+        kind: "error",
+        text: e instanceof Error ? e.message : "שגיאה",
+      });
+    } finally {
+      setSending(false);
+    }
+  };
+
   const next = state.queue[0] ?? null;
+  const canRemind = !!next && !!next.phone && !!next.callmebot;
 
   return (
     <main className="relative flex min-w-0 flex-1 flex-col p-3 sm:p-4">
@@ -134,7 +208,7 @@ export default function DishesPage() {
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row lg:gap-4 overflow-y-auto lg:overflow-visible">
         {/* PATTERN — appears bottom on mobile, right on desktop */}
-        <aside className="order-last flex w-full shrink-0 flex-col rounded-3xl bg-gradient-to-b from-sky-500/15 to-sky-500/5 p-3 ring-1 ring-sky-300/20 shadow-xl shadow-sky-900/20 sm:p-4 lg:order-first lg:w-72">
+        <aside className="order-last flex w-full shrink-0 flex-col rounded-3xl bg-gradient-to-b from-sky-500/15 to-sky-500/5 p-3 ring-1 ring-sky-300/20 shadow-xl shadow-sky-900/20 sm:p-4 lg:order-first lg:w-80">
           <div className="mb-3 flex items-center justify-between px-1">
             <h2 className="flex items-center gap-2 text-base font-bold text-sky-100 sm:text-lg">
               <span>👥</span> הקבוצה
@@ -174,60 +248,157 @@ export default function DishesPage() {
           <ol className="flex min-h-0 flex-1 flex-col gap-1.5 lg:overflow-y-auto pr-1">
             {state.pattern.length === 0 && (
               <li className="flex flex-1 items-center justify-center text-center text-sm text-white/40 py-3">
-                הקבוצה ריקה.<br />הוסף שמות והם יחזרו בתור.
+                הקבוצה ריקה.
+                <br />
+                הוסף שמות והם יחזרו בתור.
               </li>
             )}
-            {state.pattern.map((person, idx) => (
-              <li
-                key={person.id}
-                className={`flex items-center gap-2 rounded-xl px-3 py-2 ring-1 transition-colors ${
-                  idx === 0
-                    ? "bg-sky-400/25 ring-sky-300/40"
-                    : "bg-white/[0.06] ring-white/10"
-                }`}
-              >
-                <div
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold tabular-nums ${
+            {state.pattern.map((person, idx) => {
+              const isEditing =
+                editingId === person.id && editingTarget === "pattern";
+              return (
+                <li
+                  key={person.id}
+                  className={`flex items-start gap-2 rounded-xl px-3 py-2 ring-1 transition-colors ${
                     idx === 0
-                      ? "bg-sky-300 text-sky-950"
-                      : "bg-white/10 text-white/70"
+                      ? "bg-sky-400/25 ring-sky-300/40"
+                      : "bg-white/[0.06] ring-white/10"
                   }`}
                 >
-                  {idx + 1}
-                </div>
-                {editingId === person.id ? (
-                  <input
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") commitEdit("pattern");
-                      if (e.key === "Escape") cancelEdit();
-                    }}
-                    onBlur={() => commitEdit("pattern")}
-                    autoFocus
-                    className="flex-1 rounded-lg bg-white/10 px-2 py-1 text-base outline-none focus:bg-white/15"
-                  />
-                ) : (
-                  <span className="flex-1 truncate text-base">{person.name}</span>
-                )}
-                <div className="flex shrink-0 gap-0.5">
-                  <IconButton label="העלה" disabled={idx === 0} onClick={() => moveInPattern(person.id, -1)}>
-                    <path d="M18 15l-6-6-6 6" />
-                  </IconButton>
-                  <IconButton label="הורד" disabled={idx === state.pattern.length - 1} onClick={() => moveInPattern(person.id, 1)}>
-                    <path d="M6 9l6 6 6-6" />
-                  </IconButton>
-                  <IconButton label="ערוך" onClick={() => editingId === person.id ? commitEdit("pattern") : startEdit(person)}>
-                    <path d="M12 20h9" />
-                    <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-                  </IconButton>
-                  <IconButton label="הסר" onClick={() => removeFromPattern(person.id)}>
-                    <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                  </IconButton>
-                </div>
-              </li>
-            ))}
+                  <div
+                    className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold tabular-nums ${
+                      idx === 0
+                        ? "bg-sky-300 text-sky-950"
+                        : "bg-white/10 text-white/70"
+                    }`}
+                  >
+                    {idx + 1}
+                  </div>
+                  {isEditing ? (
+                    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                      <input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") commitEdit();
+                          if (e.key === "Escape") cancelEdit();
+                        }}
+                        autoFocus
+                        placeholder="שם"
+                        className="rounded-lg bg-white/10 px-2 py-1 text-base outline-none focus:bg-white/15"
+                      />
+                      <input
+                        value={editPhone}
+                        onChange={(e) => setEditPhone(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") commitEdit();
+                          if (e.key === "Escape") cancelEdit();
+                        }}
+                        dir="ltr"
+                        placeholder="+972501234567"
+                        className="rounded-lg bg-white/10 px-2 py-1 text-sm outline-none focus:bg-white/15"
+                      />
+                      <input
+                        value={editKey}
+                        onChange={(e) => setEditKey(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") commitEdit();
+                          if (e.key === "Escape") cancelEdit();
+                        }}
+                        dir="ltr"
+                        placeholder="CallMeBot key"
+                        className="rounded-lg bg-white/10 px-2 py-1 text-sm outline-none focus:bg-white/15"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <span className="flex items-center gap-1.5 truncate text-base">
+                        {person.name}
+                        {person.phone && person.callmebot && (
+                          <span
+                            title="הוגדר WhatsApp"
+                            className="text-[10px]"
+                          >
+                            📲
+                          </span>
+                        )}
+                      </span>
+                      {person.phone && (
+                        <span
+                          dir="ltr"
+                          className="truncate text-[10px] text-white/40"
+                        >
+                          {person.phone}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <div className="flex shrink-0 gap-0.5">
+                    <IconButton
+                      label="העלה"
+                      disabled={idx === 0}
+                      onClick={() => moveInPattern(person.id, -1)}
+                    >
+                      <path d="M18 15l-6-6-6 6" />
+                    </IconButton>
+                    <IconButton
+                      label="הורד"
+                      disabled={idx === state.pattern.length - 1}
+                      onClick={() => moveInPattern(person.id, 1)}
+                    >
+                      <path d="M6 9l6 6 6-6" />
+                    </IconButton>
+                    <IconButton
+                      label={isEditing ? "שמור" : "ערוך"}
+                      onClick={() =>
+                        isEditing ? commitEdit() : startEditPattern(person)
+                      }
+                    >
+                      {isEditing ? (
+                        <path d="M5 13l4 4L19 7" />
+                      ) : (
+                        <>
+                          <path d="M12 20h9" />
+                          <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                        </>
+                      )}
+                    </IconButton>
+                    <IconButton
+                      label="הסר"
+                      onClick={() => removeFromPattern(person.id)}
+                    >
+                      <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                    </IconButton>
+                  </div>
+                </li>
+              );
+            })}
           </ol>
+
+          <details className="mt-3 rounded-xl bg-white/[0.04] p-3 text-xs ring-1 ring-white/10">
+            <summary className="cursor-pointer text-white/60">
+              איך להפעיל תזכורות WhatsApp?
+            </summary>
+            <ol className="mt-2 list-decimal space-y-1 pr-5 text-white/50">
+              <li>
+                הוסף את המספר <span dir="ltr">+34 644 51 95 23</span> לאנשי הקשר
+                בטלפון של האדם
+              </li>
+              <li>
+                שלח לו בוואטסאפ:{" "}
+                <code className="rounded bg-white/10 px-1 text-[10px]">
+                  I allow callmebot to send me messages
+                </code>
+              </li>
+              <li>
+                המתן לתשובה (עד 2-5 דק&apos;) — תקבל מפתח API (מספר)
+              </li>
+              <li>
+                לחץ ✏ כאן, מלא טלפון בפורמט בינלאומי{" "}
+                <span dir="ltr">(+972…)</span> ואת המפתח שקיבלת
+              </li>
+            </ol>
+          </details>
         </aside>
 
         {/* MAIN — appears top on mobile, left on desktop */}
@@ -259,7 +430,9 @@ export default function DishesPage() {
                 {next.name}
               </div>
             ) : (
-              <div className="mb-4 text-3xl text-white/30 sm:mb-6 sm:text-5xl">—</div>
+              <div className="mb-4 text-3xl text-white/30 sm:mb-6 sm:text-5xl">
+                —
+              </div>
             )}
 
             <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
@@ -274,6 +447,16 @@ export default function DishesPage() {
                   }`}
                 >
                   {state.highlight ? "ביטול הדגשה" : "🍽️ צריך לפנות מדיח"}
+                </button>
+              )}
+              {canRemind && (
+                <button
+                  type="button"
+                  onClick={sendReminder}
+                  disabled={sending}
+                  className="rounded-full bg-gradient-to-r from-green-500 to-emerald-500 px-4 py-2.5 text-sm font-bold text-emerald-950 shadow-lg shadow-emerald-500/30 transition-all hover:from-green-400 hover:to-emerald-400 active:scale-95 disabled:opacity-50 sm:px-6 sm:py-3.5 sm:text-lg"
+                >
+                  {sending ? "שולח…" : `📲 שלח תזכורת ל${next?.name ?? ""}`}
                 </button>
               )}
               {state.pattern.length >= 2 && (
@@ -294,79 +477,105 @@ export default function DishesPage() {
               <h3 className="flex items-center gap-2 text-base font-bold text-white/85 sm:text-lg">
                 <span>🔁</span> הסדר הבא
               </h3>
-              <span className="text-xs text-white/40 hidden sm:inline">
+              <span className="hidden text-xs text-white/40 sm:inline">
                 שינוי בקבוצה יאפס את הסדר
               </span>
             </div>
             <ol className="flex min-h-0 flex-1 flex-col gap-1 sm:gap-1.5 lg:overflow-y-auto">
               {state.queue.length === 0 && (
-                <li className="flex flex-1 items-center justify-center text-sm text-white/40 py-4">
+                <li className="flex flex-1 items-center justify-center py-4 text-sm text-white/40">
                   הוסף שמות לקבוצה כדי לראות את התור
                 </li>
               )}
-              {state.queue.map((p, i) => (
-                <li
-                  key={p.id}
-                  className={`flex items-center gap-2 rounded-xl px-3 py-2 ring-1 transition-all sm:gap-3 sm:rounded-2xl sm:px-4 sm:py-2.5 ${
-                    i === 0
-                      ? "bg-gradient-to-r from-emerald-400/25 to-emerald-400/10 ring-emerald-300/40 shadow-md shadow-emerald-500/15"
-                      : "bg-white/[0.05] ring-white/10"
-                  }`}
-                >
-                  <div
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-extrabold tabular-nums sm:h-9 sm:w-9 sm:rounded-xl sm:text-sm ${
+              {state.queue.map((p, i) => {
+                const isEditing =
+                  editingId === p.id && editingTarget === "queue";
+                return (
+                  <li
+                    key={p.id}
+                    className={`flex items-center gap-2 rounded-xl px-3 py-2 ring-1 transition-all sm:gap-3 sm:rounded-2xl sm:px-4 sm:py-2.5 ${
                       i === 0
-                        ? "bg-gradient-to-br from-emerald-300 to-green-400 text-emerald-950 shadow-md shadow-emerald-500/40"
-                        : "bg-white/10 text-white/70"
+                        ? "bg-gradient-to-r from-emerald-400/25 to-emerald-400/10 ring-emerald-300/40 shadow-md shadow-emerald-500/15"
+                        : "bg-white/[0.05] ring-white/10"
                     }`}
                   >
-                    {i + 1}
-                  </div>
-                  {editingId === p.id ? (
-                    <input
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") commitEdit("queue");
-                        if (e.key === "Escape") cancelEdit();
-                      }}
-                      onBlur={() => commitEdit("queue")}
-                      autoFocus
-                      className="flex-1 rounded-lg bg-white/10 px-2 py-1 text-base outline-none focus:bg-white/15 sm:text-lg"
-                    />
-                  ) : (
-                    <span
-                      className={`flex-1 truncate ${
+                    <div
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-extrabold tabular-nums sm:h-9 sm:w-9 sm:rounded-xl sm:text-sm ${
                         i === 0
-                          ? "text-base font-bold text-emerald-50 sm:text-xl"
-                          : "text-sm text-white/90 sm:text-lg"
+                          ? "bg-gradient-to-br from-emerald-300 to-green-400 text-emerald-950 shadow-md shadow-emerald-500/40"
+                          : "bg-white/10 text-white/70"
                       }`}
                     >
-                      {p.name}
-                    </span>
-                  )}
-                  {i === 0 && editingId !== p.id && (
-                    <span className="hidden rounded-full bg-emerald-400/30 px-2.5 py-0.5 text-xs font-bold text-emerald-100 ring-1 ring-emerald-300/40 sm:inline">
-                      ⭐ הבא
-                    </span>
-                  )}
-                  <div className="flex shrink-0 gap-0.5">
-                    <IconButton label="העלה" disabled={i === 0} onClick={() => moveInQueue(p.id, -1)}>
-                      <path d="M18 15l-6-6-6 6" />
-                    </IconButton>
-                    <IconButton label="הורד" disabled={i === state.queue.length - 1} onClick={() => moveInQueue(p.id, 1)}>
-                      <path d="M6 9l6 6 6-6" />
-                    </IconButton>
-                    <IconButton label="ערוך" onClick={() => editingId === p.id ? commitEdit("queue") : startEdit(p)}>
-                      <path d="M12 20h9" />
-                      <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-                    </IconButton>
-                    <IconButton label="הסר" onClick={() => removeFromQueue(p.id)}>
-                      <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                    </IconButton>
-                  </div>
-                </li>
-              ))}
+                      {i + 1}
+                    </div>
+                    {isEditing ? (
+                      <input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") commitEdit();
+                          if (e.key === "Escape") cancelEdit();
+                        }}
+                        onBlur={commitEdit}
+                        autoFocus
+                        className="flex-1 rounded-lg bg-white/10 px-2 py-1 text-base outline-none focus:bg-white/15 sm:text-lg"
+                      />
+                    ) : (
+                      <span
+                        className={`flex-1 truncate ${
+                          i === 0
+                            ? "text-base font-bold text-emerald-50 sm:text-xl"
+                            : "text-sm text-white/90 sm:text-lg"
+                        }`}
+                      >
+                        {p.name}
+                      </span>
+                    )}
+                    {i === 0 && !isEditing && (
+                      <span className="hidden rounded-full bg-emerald-400/30 px-2.5 py-0.5 text-xs font-bold text-emerald-100 ring-1 ring-emerald-300/40 sm:inline">
+                        ⭐ הבא
+                      </span>
+                    )}
+                    <div className="flex shrink-0 gap-0.5">
+                      <IconButton
+                        label="העלה"
+                        disabled={i === 0}
+                        onClick={() => moveInQueue(p.id, -1)}
+                      >
+                        <path d="M18 15l-6-6-6 6" />
+                      </IconButton>
+                      <IconButton
+                        label="הורד"
+                        disabled={i === state.queue.length - 1}
+                        onClick={() => moveInQueue(p.id, 1)}
+                      >
+                        <path d="M6 9l6 6 6-6" />
+                      </IconButton>
+                      <IconButton
+                        label={isEditing ? "שמור" : "ערוך"}
+                        onClick={() =>
+                          isEditing ? commitEdit() : startEditQueue(p)
+                        }
+                      >
+                        {isEditing ? (
+                          <path d="M5 13l4 4L19 7" />
+                        ) : (
+                          <>
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                          </>
+                        )}
+                      </IconButton>
+                      <IconButton
+                        label="הסר"
+                        onClick={() => removeFromQueue(p.id)}
+                      >
+                        <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                      </IconButton>
+                    </div>
+                  </li>
+                );
+              })}
             </ol>
             <button
               type="button"
@@ -380,6 +589,18 @@ export default function DishesPage() {
           </div>
         </section>
       </div>
+
+      {toast && (
+        <div
+          className={`fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full px-5 py-3 text-sm font-medium shadow-lg ring-1 ${
+            toast.kind === "success"
+              ? "bg-emerald-500/95 text-white ring-emerald-300/50"
+              : "bg-red-500/95 text-white ring-red-300/50"
+          }`}
+        >
+          {toast.text}
+        </div>
+      )}
     </main>
   );
 }
