@@ -23,10 +23,10 @@ Rules:
 - Output nothing except the JSON array — no markdown fences, no commentary.`;
 
 export async function POST(req: Request) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
-      { ok: false, error: "ANTHROPIC_API_KEY not configured on the server" },
+      { ok: false, error: "GEMINI_API_KEY not configured on the server" },
       { status: 500 },
     );
   }
@@ -48,29 +48,16 @@ export async function POST(req: Request) {
   }
 
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const res = await fetch(geminiUrl, {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
+      headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        model: "claude-sonnet-4-5",
-        max_tokens: 2048,
-        messages: [
+        contents: [
           {
-            role: "user",
-            content: [
-              {
-                type: "image",
-                source: {
-                  type: "base64",
-                  media_type: mimeType,
-                  data: image,
-                },
-              },
-              { type: "text", text: PROMPT },
+            parts: [
+              { text: PROMPT },
+              { inline_data: { mime_type: mimeType, data: image } },
             ],
           },
         ],
@@ -82,19 +69,18 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           ok: false,
-          error: `Claude HTTP ${res.status}: ${text.slice(0, 300)}`,
+          error: `Gemini HTTP ${res.status}: ${text.slice(0, 300)}`,
         },
         { status: 500 },
       );
     }
 
     const data = (await res.json()) as {
-      content?: Array<{ type?: string; text?: string }>;
+      candidates?: Array<{
+        content?: { parts?: Array<{ text?: string }> };
+      }>;
     };
-    const text =
-      data.content?.find((c) => c.type === "text")?.text ??
-      data.content?.[0]?.text ??
-      "";
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
     const match = text.match(/\[[\s\S]*\]/);
     if (!match) {
