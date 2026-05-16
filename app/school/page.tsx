@@ -16,14 +16,19 @@ import LoginDialog from "./LoginDialog";
 type Slot = "left" | "right";
 
 export default function SchoolPage() {
-  const { state: config, setState: setConfig, loaded } =
-    useSharedState<SchoolConfig>("school", DEFAULT_SCHOOL_CONFIG);
+  const {
+    state: config,
+    setState: setConfig,
+    loaded,
+  } = useSharedState<SchoolConfig>("school", DEFAULT_SCHOOL_CONFIG);
   const [editing, setEditing] = useState<Slot | null>(null);
   const [schedules, setSchedules] = useState<Record<Slot, Schedule | null>>({
     left: null,
     right: null,
   });
-  const [errors, setErrors] = useState<Record<Slot, string | null>>({
+  const [errors, setErrors] = useState<
+    Record<Slot, { message: string; tokenExpired?: boolean } | null>
+  >({
     left: null,
     right: null,
   });
@@ -39,21 +44,23 @@ export default function SchoolPage() {
       const res = await fetch("/api/webtop/schedule", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: sibling.username,
-          password: sibling.password,
-        }),
+        body: JSON.stringify({ curl: sibling.scheduleCurl }),
       });
       const data: ScheduleResponse = await res.json();
       if (!data.ok) {
-        setErrors((s) => ({ ...s, [slot]: data.error }));
+        setErrors((s) => ({
+          ...s,
+          [slot]: { message: data.error, tokenExpired: data.tokenExpired },
+        }));
         return;
       }
       setSchedules((s) => ({ ...s, [slot]: data.schedule }));
     } catch (e) {
       setErrors((s) => ({
         ...s,
-        [slot]: e instanceof Error ? e.message : "שגיאה בטעינה",
+        [slot]: {
+          message: e instanceof Error ? e.message : "שגיאה בטעינה",
+        },
       }));
     } finally {
       setLoading((s) => ({ ...s, [slot]: false }));
