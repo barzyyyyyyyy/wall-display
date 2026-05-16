@@ -32,6 +32,7 @@ export default function DishesPage() {
 
   const [sending, setSending] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     if (!toast) return;
@@ -212,6 +213,14 @@ export default function DishesPage() {
           <div className="mb-3 flex items-center justify-between px-1">
             <h2 className="flex items-center gap-2 text-base font-bold text-sky-100 sm:text-lg">
               <span>👥</span> הקבוצה
+              <button
+                type="button"
+                onClick={() => setShowHelp(true)}
+                aria-label="עזרה: איך להפעיל WhatsApp"
+                className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-400/20 text-sm text-sky-100 ring-1 ring-sky-300/30 transition-colors hover:bg-sky-400/30"
+              >
+                ?
+              </button>
             </h2>
             <span className="rounded-full bg-sky-400/20 px-2 py-0.5 text-xs font-medium text-sky-100">
               {state.pattern.length} / {MAX_PATTERN}
@@ -375,30 +384,6 @@ export default function DishesPage() {
             })}
           </ol>
 
-          <details className="mt-3 rounded-xl bg-white/[0.04] p-3 text-xs ring-1 ring-white/10">
-            <summary className="cursor-pointer text-white/60">
-              איך להפעיל תזכורות WhatsApp?
-            </summary>
-            <ol className="mt-2 list-decimal space-y-1 pr-5 text-white/50">
-              <li>
-                הוסף את המספר <span dir="ltr">+34 644 51 95 23</span> לאנשי הקשר
-                בטלפון של האדם
-              </li>
-              <li>
-                שלח לו בוואטסאפ:{" "}
-                <code className="rounded bg-white/10 px-1 text-[10px]">
-                  I allow callmebot to send me messages
-                </code>
-              </li>
-              <li>
-                המתן לתשובה (עד 2-5 דק&apos;) — תקבל מפתח API (מספר)
-              </li>
-              <li>
-                לחץ ✏ כאן, מלא טלפון בפורמט בינלאומי{" "}
-                <span dir="ltr">(+972…)</span> ואת המפתח שקיבלת
-              </li>
-            </ol>
-          </details>
         </aside>
 
         {/* MAIN — appears top on mobile, left on desktop */}
@@ -601,7 +586,183 @@ export default function DishesPage() {
           {toast.text}
         </div>
       )}
+
+      {showHelp && <WhatsAppHelpModal onClose={() => setShowHelp(false)} />}
     </main>
+  );
+}
+
+function WhatsAppHelpModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 sm:p-8"
+      onClick={onClose}
+    >
+      <div
+        className="flex max-h-full w-full max-w-xl flex-col overflow-hidden rounded-3xl bg-neutral-900/95 backdrop-blur-xl ring-1 ring-white/10"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-white/10 p-5 sm:p-6">
+          <h2 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+            <span>📲</span> הפעלת תזכורות WhatsApp
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="סגור"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            >
+              <path d="M6 6l12 12M18 6l-12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="space-y-6 overflow-y-auto p-5 sm:p-6">
+          {/* Phone field explanation */}
+          <section>
+            <h3 className="mb-3 flex items-center gap-2 text-lg font-bold text-sky-200">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-400/20 text-sm text-sky-100 ring-1 ring-sky-300/30">
+                1
+              </span>
+              שדה הטלפון
+            </h3>
+            <p className="mb-3 text-sm leading-relaxed text-white/75">
+              מספר הטלפון של האדם שיקבל את התזכורת, בפורמט בינלאומי. דוגמה
+              למספר ישראלי <span dir="ltr">050-123-4567</span>:
+            </p>
+            <ul className="space-y-1.5 text-sm text-white/70">
+              <li className="flex items-center gap-2">
+                <span className="text-white/40">•</span>
+                <span>הסר מקפים ורווחים:</span>
+                <code className="rounded bg-white/10 px-2 py-0.5 font-mono" dir="ltr">
+                  0501234567
+                </code>
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-white/40">•</span>
+                <span>
+                  החלף את ה-<code className="rounded bg-white/10 px-1.5 font-mono">0</code>{" "}
+                  בהתחלה ב-<code className="rounded bg-white/10 px-1.5 font-mono">+972</code>:
+                </span>
+              </li>
+              <li className="flex items-center gap-2 pr-7">
+                <span className="text-emerald-300">✓</span>
+                <code className="rounded bg-emerald-500/20 px-2.5 py-1 font-mono text-emerald-100" dir="ltr">
+                  +972501234567
+                </code>
+              </li>
+            </ul>
+          </section>
+
+          {/* CallMeBot key explanation */}
+          <section>
+            <h3 className="mb-3 flex items-center gap-2 text-lg font-bold text-sky-200">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-400/20 text-sm text-sky-100 ring-1 ring-sky-300/30">
+                2
+              </span>
+              שדה ה-CallMeBot key
+            </h3>
+            <p className="mb-3 text-sm leading-relaxed text-white/75">
+              מפתח שמקבלים פעם אחת מ-CallMeBot — שירות בחינם שמאפשר לבוט לשלוח
+              לך הודעות WhatsApp. כך משיגים אותו:
+            </p>
+            <ol className="space-y-2.5 text-sm text-white/75">
+              <li className="flex gap-2.5">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white/60">
+                  1
+                </span>
+                <span>
+                  בטלפון של האדם, הוסף לאנשי הקשר מספר חדש:{" "}
+                  <code className="rounded bg-white/10 px-2 py-0.5 font-mono" dir="ltr">
+                    +34 644 51 95 23
+                  </code>{" "}
+                  (השם לא משנה, למשל &quot;CallMeBot&quot;)
+                </span>
+              </li>
+              <li className="flex gap-2.5">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white/60">
+                  2
+                </span>
+                <span>
+                  פתח WhatsApp ושלח לאיש הקשר הזה את ההודעה (באנגלית, בדיוק):
+                  <div className="mt-1.5 rounded-lg bg-white/[0.06] px-3 py-2 font-mono text-xs text-emerald-200" dir="ltr">
+                    I allow callmebot to send me messages
+                  </div>
+                </span>
+              </li>
+              <li className="flex gap-2.5">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white/60">
+                  3
+                </span>
+                <span>
+                  המתן עד 5 דקות. הבוט יענה עם הודעה שמכילה את ה-API key
+                  שלך — מספר כמו{" "}
+                  <code className="rounded bg-white/10 px-1.5 font-mono" dir="ltr">
+                    5523471
+                  </code>
+                </span>
+              </li>
+              <li className="flex gap-2.5">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white/60">
+                  4
+                </span>
+                <span>
+                  העתק את המספר הזה והדבק בשדה{" "}
+                  <code className="rounded bg-white/10 px-1.5 font-mono text-xs">
+                    CallMeBot key
+                  </code>{" "}
+                  כאן
+                </span>
+              </li>
+            </ol>
+          </section>
+
+          {/* Example summary */}
+          <section className="rounded-2xl bg-emerald-500/10 p-4 ring-1 ring-emerald-400/25">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-emerald-200">
+              לסיכום — דוגמה:
+            </p>
+            <div className="space-y-1.5 text-sm">
+              <div className="flex justify-between gap-3">
+                <span className="text-white/60">שם:</span>
+                <span className="text-white">דניאל</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-white/60">טלפון:</span>
+                <code className="font-mono text-emerald-100" dir="ltr">
+                  +972501234567
+                </code>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-white/60">CallMeBot key:</span>
+                <code className="font-mono text-emerald-100" dir="ltr">
+                  5523471
+                </code>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div className="flex justify-end border-t border-white/10 bg-black/20 p-4 sm:p-5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full bg-white px-5 py-2.5 text-base font-medium text-neutral-950 hover:bg-white/90"
+          >
+            הבנתי
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
