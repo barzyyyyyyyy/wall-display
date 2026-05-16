@@ -76,7 +76,8 @@ export default function DishesPage() {
       if (s.pattern.length < 2) return s;
       const [first, ...rest] = s.pattern;
       const pattern = [...rest, first];
-      return { ...s, pattern, queue: buildQueue(pattern) };
+      // Once dishes are done, drop the "needs cleaning" highlight automatically.
+      return { ...s, pattern, queue: buildQueue(pattern), highlight: false };
     });
   };
 
