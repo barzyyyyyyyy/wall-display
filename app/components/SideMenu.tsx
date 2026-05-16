@@ -53,6 +53,14 @@ const items: MenuItem[] = [
       "bg-gradient-to-br from-violet-400/40 to-purple-500/30 ring-violet-300/40 shadow-violet-500/20",
     activeRing: "ring-violet-300/50 shadow-violet-500/20",
   },
+  {
+    href: "/messages",
+    label: "הודעות מוובטופ",
+    icon: "📬",
+    iconBg:
+      "bg-gradient-to-br from-orange-400/40 to-red-500/30 ring-orange-300/40 shadow-orange-500/20",
+    activeRing: "ring-orange-300/50 shadow-orange-500/20",
+  },
 ];
 
 export default function SideMenu() {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-type Accent = "amber" | "emerald" | "sky" | "violet" | "neutral";
+type Accent = "amber" | "emerald" | "sky" | "violet" | "orange" | "neutral";
 
 const accentDot: Record<Accent, string> = {
   amber:
@@ -10,6 +10,8 @@ const accentDot: Record<Accent, string> = {
   sky: "bg-gradient-to-br from-sky-300 to-cyan-400 shadow-[0_0_16px_rgba(125,211,252,0.7)]",
   violet:
     "bg-gradient-to-br from-violet-300 to-purple-400 shadow-[0_0_16px_rgba(196,181,253,0.7)]",
+  orange:
+    "bg-gradient-to-br from-orange-300 to-red-400 shadow-[0_0_16px_rgba(253,186,116,0.7)]",
   neutral: "bg-white/60",
 };
 

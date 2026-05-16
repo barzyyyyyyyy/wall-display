@@ -118,6 +118,73 @@ async function uploadToServer({ slot, name, lessons }) {
   return res.json();
 }
 
+function deriveUrl(base, path) {
+  const u = new URL(base);
+  return `${u.protocol}//${u.host}${path}`;
+}
+
+async function processMessages() {
+  if (!config.messages?.curl) return;
+  try {
+    const { url, headers, body } = parseCurl(config.messages.curl);
+    if (!url) throw new Error("Could not parse URL from messages cURL");
+    delete headers["accept-encoding"];
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers,
+      body: body || undefined,
+    });
+    if (!res.ok) {
+      const preview = await res.text().catch(() => "");
+      throw new Error(`Webtop HTTP ${res.status}: ${preview.slice(0, 150)}`);
+    }
+    const json = await res.json();
+    if (!json?.status || !Array.isArray(json.data)) {
+      throw new Error(
+        json?.errorDescription ?? json?.message ?? "Webtop returned error",
+      );
+    }
+
+    const messages = json.data
+      .map((m) => ({
+        subject: (m.subject ?? "").trim(),
+        sender: [m.student_F_name, m.student_L_name]
+          .filter((p) => p && String(p).trim().length > 0)
+          .join(" "),
+        date: m.sendingDate ?? "",
+        hasRead: m.hasRead === 1,
+        hasAttachments: m.filesWereAttached === 1,
+        messageId: m.messageId ?? "",
+      }))
+      .filter((m) => m.subject);
+
+    const totalCount =
+      typeof json.data[0]?.count === "number"
+        ? json.data[0].count
+        : messages.length;
+
+    const uploadUrl = deriveUrl(config.uploadUrl, "/api/messages/upload");
+    const upRes = await fetch(uploadUrl, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-sync-secret": config.uploadKey,
+      },
+      body: JSON.stringify({ messages, totalCount }),
+    });
+    if (!upRes.ok) {
+      const t = await upRes.text().catch(() => "");
+      throw new Error(`Upload HTTP ${upRes.status}: ${t.slice(0, 200)}`);
+    }
+
+    log(`✓ הודעות: ${messages.length} מוצגות (מתוך ${totalCount} בסה״כ)`);
+  } catch (e) {
+    log(`✗ הודעות: ${e.message}`);
+    process.exitCode = 1;
+  }
+}
+
 async function processSibling(sib) {
   try {
     const lessons = await fetchSiblingLessons(sib.curl);
@@ -148,6 +215,7 @@ async function main() {
   for (const sib of config.siblings) {
     await processSibling(sib);
   }
+  await processMessages();
 }
 
 main().catch((e) => {
