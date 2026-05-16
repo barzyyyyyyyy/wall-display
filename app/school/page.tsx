@@ -1,71 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import PageHeader from "@/app/components/PageHeader";
 import LiveTime from "@/app/components/LiveTime";
 import { DEFAULT_SCHOOL_CONFIG } from "@/lib/storage";
-import type {
-  Schedule,
-  ScheduleResponse,
-  SchoolConfig,
-  Sibling,
-} from "@/lib/types";
+import type { SchoolConfig, Sibling } from "@/lib/types";
 import { useSharedState } from "@/lib/use-shared-state";
 import SiblingColumn from "./SiblingColumn";
-import LoginDialog from "./LoginDialog";
+import ScheduleEditor from "./ScheduleEditor";
 
 type Slot = "left" | "right";
 
+// Migrate any older Sibling shape (e.g. {name, username, password}) to the
+// new lessons-based shape. Old credentials are discarded.
+function normalize(s: Sibling | null): Sibling | null {
+  if (!s) return null;
+  if (Array.isArray(s.lessons)) return { name: s.name, lessons: s.lessons };
+  return { name: s.name, lessons: [] };
+}
+
 export default function SchoolPage() {
-  const { state: config, setState: setConfig, loaded } =
-    useSharedState<SchoolConfig>("school", DEFAULT_SCHOOL_CONFIG);
+  const { state: config, setState: setConfig } = useSharedState<SchoolConfig>(
+    "school",
+    DEFAULT_SCHOOL_CONFIG,
+  );
   const [editing, setEditing] = useState<Slot | null>(null);
-  const [schedules, setSchedules] = useState<Record<Slot, Schedule | null>>({
-    left: null,
-    right: null,
-  });
-  const [errors, setErrors] = useState<Record<Slot, string | null>>({
-    left: null,
-    right: null,
-  });
-  const [loading, setLoading] = useState<Record<Slot, boolean>>({
-    left: false,
-    right: false,
-  });
-
-  const fetchSchedule = useCallback(async (slot: Slot, sibling: Sibling) => {
-    setLoading((s) => ({ ...s, [slot]: true }));
-    setErrors((s) => ({ ...s, [slot]: null }));
-    try {
-      const res = await fetch("/api/webtop/schedule", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: sibling.username,
-          password: sibling.password,
-        }),
-      });
-      const data: ScheduleResponse = await res.json();
-      if (!data.ok) {
-        setErrors((s) => ({ ...s, [slot]: data.error }));
-        return;
-      }
-      setSchedules((s) => ({ ...s, [slot]: data.schedule }));
-    } catch (e) {
-      setErrors((s) => ({
-        ...s,
-        [slot]: e instanceof Error ? e.message : "שגיאה בטעינה",
-      }));
-    } finally {
-      setLoading((s) => ({ ...s, [slot]: false }));
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!loaded) return;
-    if (config.left) fetchSchedule("left", config.left);
-    if (config.right) fetchSchedule("right", config.right);
-  }, [loaded, config.left, config.right, fetchSchedule]);
 
   const handleSave = (slot: Slot, sibling: Sibling) => {
     setConfig((c) => ({ ...c, [slot]: sibling }));
@@ -74,8 +33,6 @@ export default function SchoolPage() {
 
   const handleRemove = (slot: Slot) => {
     setConfig((c) => ({ ...c, [slot]: null }));
-    setSchedules((s) => ({ ...s, [slot]: null }));
-    setErrors((s) => ({ ...s, [slot]: null }));
   };
 
   return (
@@ -83,31 +40,22 @@ export default function SchoolPage() {
       <PageHeader
         title="בית ספר 📚"
         accent="amber"
-        extra={
-          <LiveTime className="text-base font-medium text-white/70" />
-        }
+        extra={<LiveTime className="text-base font-medium text-white/70" />}
       />
       <div className="grid flex-1 grid-cols-1 gap-3 min-h-0 overflow-y-auto sm:grid-cols-2 sm:gap-4 sm:overflow-visible">
         {(["right", "left"] as const).map((slot) => (
           <SiblingColumn
             key={slot}
-            sibling={config[slot]}
-            schedule={schedules[slot]}
-            loading={loading[slot]}
-            error={errors[slot]}
+            sibling={normalize(config[slot])}
             onAdd={() => setEditing(slot)}
             onEdit={() => setEditing(slot)}
             onRemove={() => handleRemove(slot)}
-            onRetry={() => {
-              const s = config[slot];
-              if (s) fetchSchedule(slot, s);
-            }}
           />
         ))}
       </div>
       {editing && (
-        <LoginDialog
-          initial={config[editing]}
+        <ScheduleEditor
+          initial={normalize(config[editing])}
           onCancel={() => setEditing(null)}
           onSave={(sibling) => handleSave(editing, sibling)}
         />

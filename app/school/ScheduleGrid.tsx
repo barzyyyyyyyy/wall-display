@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Lesson, Schedule } from "@/lib/types";
+import type { Lesson } from "@/lib/types";
 import { periodTimes, toMinutes } from "@/lib/periods";
 
 const DAY_NAMES = [
@@ -18,11 +18,7 @@ type LessonWithTimes = Lesson & { start: string; end: string };
 type Status = "past" | "current" | "upcoming";
 
 function enrich(lesson: Lesson): LessonWithTimes | null {
-  const explicit =
-    lesson.startTime && lesson.endTime
-      ? { start: lesson.startTime, end: lesson.endTime }
-      : null;
-  const times = explicit ?? periodTimes(lesson.period);
+  const times = periodTimes(lesson.period);
   if (!times) return null;
   return { ...lesson, start: times.start, end: times.end };
 }
@@ -35,18 +31,17 @@ function statusOf(l: LessonWithTimes, nowMin: number): Status {
   return "current";
 }
 
-/** Find which day to show — today, or the next day that has lessons. */
 function pickDay(
-  schedule: Schedule,
+  lessons: Lesson[],
   today: number,
 ): { day: number; lessons: Lesson[]; isToday: boolean } {
-  const todayLessons = schedule.lessons.filter((l) => l.day === today);
+  const todayLessons = lessons.filter((l) => l.day === today);
   if (todayLessons.length > 0) {
     return { day: today, lessons: todayLessons, isToday: true };
   }
   for (let i = 1; i <= 7; i++) {
     const d = (today + i) % 7;
-    const next = schedule.lessons.filter((l) => l.day === d);
+    const next = lessons.filter((l) => l.day === d);
     if (next.length > 0) {
       return { day: d, lessons: next, isToday: false };
     }
@@ -54,7 +49,7 @@ function pickDay(
   return { day: today, lessons: [], isToday: true };
 }
 
-export default function ScheduleGrid({ schedule }: { schedule: Schedule }) {
+export default function ScheduleGrid({ lessons }: { lessons: Lesson[] }) {
   const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -66,17 +61,17 @@ export default function ScheduleGrid({ schedule }: { schedule: Schedule }) {
   if (!now) return null;
 
   const today = now.getDay();
-  const picked = pickDay(schedule, today);
-  const lessons = picked.lessons
+  const picked = pickDay(lessons, today);
+  const enriched = picked.lessons
     .map(enrich)
     .filter((l): l is LessonWithTimes => l !== null)
     .sort((a, b) => a.period - b.period);
 
-  if (lessons.length === 0) {
+  if (enriched.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
         <p className="text-3xl text-white/70">אין שיעורים</p>
-        <p className="text-base text-white/40">{DAY_NAMES[today]}</p>
+        <p className="text-base text-white/40">לא הוזנו שיעורים</p>
       </div>
     );
   }
@@ -96,7 +91,7 @@ export default function ScheduleGrid({ schedule }: { schedule: Schedule }) {
         )}
       </p>
       <div className="grid min-h-0 flex-1 auto-rows-fr gap-2">
-        {lessons.map((lesson) => {
+        {enriched.map((lesson) => {
           const status: Status = picked.isToday
             ? statusOf(lesson, nowMin)
             : "upcoming";
@@ -133,9 +128,12 @@ function LessonRow({
         <div className="truncate text-3xl font-semibold leading-tight">
           {lesson.subject}
         </div>
-        {lesson.teacher && (
-          <div className="truncate text-base opacity-70">{lesson.teacher}</div>
-        )}
+        <div className="flex flex-wrap gap-x-3 text-base opacity-70">
+          {lesson.teacher && <span className="truncate">{lesson.teacher}</span>}
+          {lesson.room && (
+            <span className="truncate text-sm opacity-80">{lesson.room}</span>
+          )}
+        </div>
       </div>
       <div className="flex flex-col items-end text-base tabular-nums opacity-80">
         <span dir="ltr" className="font-medium">
