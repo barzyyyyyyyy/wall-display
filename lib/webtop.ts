@@ -172,15 +172,38 @@ export async function fetchWebtopScheduleFromCurl(
     cache: "no-store",
   });
 
-  if (res.status === 401 || res.status === 403) {
-    const e = new Error("Session expired — please update the cURL");
-    (e as Error & { tokenExpired?: boolean }).tokenExpired = true;
-    throw e;
-  }
-  if (!res.ok) {
-    throw new Error(`Webtop returned HTTP ${res.status}`);
+  const responseText = await res.text();
+
+  // Try to parse as JSON regardless of status — Webtop sometimes returns
+  // 200 with status:false on expiry, or a non-JSON HTML page when blocked.
+  let data: WebtopApiResponse | null = null;
+  try {
+    data = JSON.parse(responseText) as WebtopApiResponse;
+  } catch {
+    /* not JSON */
   }
 
-  const data = (await res.json()) as WebtopApiResponse;
+  if (!data) {
+    // Non-JSON response means we're being blocked / error page.
+    const e = new Error(
+      `Webtop ${res.status}: ${responseText.slice(0, 250).replace(/\s+/g, " ")}`,
+    );
+    if (res.status === 401 || res.status === 403) {
+      (e as Error & { tokenExpired?: boolean }).tokenExpired = true;
+    }
+    throw e;
+  }
+
+  if (!data.status) {
+    const msg =
+      data.errorDescription ?? data.message ?? "Webtop returned status:false";
+    const e = new Error(msg);
+    // Webtop returns status:false with various error codes on expiry.
+    if (/login|session|token|אינך|מחובר|פג|תוקף/i.test(msg)) {
+      (e as Error & { tokenExpired?: boolean }).tokenExpired = true;
+    }
+    throw e;
+  }
+
   return parseScheduleJson(data);
 }
