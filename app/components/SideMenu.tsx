@@ -51,14 +51,14 @@ export default function SideMenu() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  // Auto-close on route change (mobile drawer behavior)
+  // Close on route change (mobile drawer behavior)
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
 
   return (
     <>
-      {/* Floating hamburger — only visible on mobile when sidebar is closed */}
+      {/* Floating hamburger — only on mobile, only when drawer is closed */}
       {!open && (
         <button
           type="button"
@@ -80,7 +80,7 @@ export default function SideMenu() {
         </button>
       )}
 
-      {/* Backdrop on mobile when open */}
+      {/* Mobile backdrop */}
       {open && (
         <button
           type="button"
@@ -90,10 +90,13 @@ export default function SideMenu() {
         />
       )}
 
-      {/* Sidebar */}
+      {/* Mobile drawer (display:none when closed so it can't paint a strip).
+          On lg+ it always renders in-flow with width transitions. */}
       <aside
-        className={`fixed top-0 right-0 z-40 flex h-full shrink-0 flex-col gap-3 overflow-hidden border-l border-white/10 bg-neutral-950/95 p-3 backdrop-blur-md transition-[width] duration-300 ease-out lg:static lg:z-auto lg:bg-white/[0.03] lg:backdrop-blur-none ${
-          open ? "w-72" : "w-0 lg:w-20"
+        className={`fixed top-0 right-0 z-40 h-full w-72 shrink-0 flex-col gap-3 overflow-hidden border-l border-white/10 bg-neutral-950/95 p-3 backdrop-blur-md ${
+          open ? "flex" : "hidden"
+        } lg:static lg:z-auto lg:flex lg:translate-x-0 lg:border-l lg:bg-white/[0.03] lg:p-3 lg:backdrop-blur-none lg:transition-[width] lg:duration-300 lg:ease-out ${
+          open ? "lg:w-72" : "lg:w-20"
         }`}
       >
         <button
