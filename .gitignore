@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .test-payload.json
+
+# Local sync script config (contains captured cookies + sync secret)
+scripts/config.json

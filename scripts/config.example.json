@@ -1,0 +1,11 @@
+{
+  "uploadUrl": "https://wall-display-ten.vercel.app/api/school/upload",
+  "uploadKey": "REPLACE_WITH_YOUR_SYNC_SECRET",
+  "siblings": [
+    {
+      "slot": "left",
+      "name": "ליה",
+      "curl": "curl 'https://webtopserver.smartschool.co.il/server/api/dashboard/ShotefSchedualeDataForToday' -H 'content-type: application/json' -b 'uniqueId=...; webToken=...' -H 'origin: https://webtop.smartschool.co.il' -H 'referer: https://webtop.smartschool.co.il/' --data-raw '{\"id\":\"...\",\"ClassCode\":7,\"ClassNumber\":9}'"
+    }
+  ]
+}
