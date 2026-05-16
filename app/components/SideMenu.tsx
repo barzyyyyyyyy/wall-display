@@ -45,6 +45,14 @@ const items: MenuItem[] = [
       "bg-gradient-to-br from-sky-400/40 to-cyan-500/30 ring-sky-300/40 shadow-sky-500/20",
     activeRing: "ring-sky-300/50 shadow-sky-500/20",
   },
+  {
+    href: "/work",
+    label: "שעות עבודה",
+    icon: "💼",
+    iconBg:
+      "bg-gradient-to-br from-violet-400/40 to-purple-500/30 ring-violet-300/40 shadow-violet-500/20",
+    activeRing: "ring-violet-300/50 shadow-violet-500/20",
+  },
 ];
 
 export default function SideMenu() {
