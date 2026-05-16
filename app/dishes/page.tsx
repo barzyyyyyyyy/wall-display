@@ -761,10 +761,14 @@ function WhatsAppHelpModal({ onClose }: { onClose: () => void }) {
             </div>
           </section>
 
-          {/* Hint to close */}
-          <p className="mt-10 text-center text-sm text-white/40">
-            לחץ בכל מקום מחוץ לטקסט כדי לחזור
-          </p>
+          {/* Big close button at the bottom — works on mobile + desktop */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-10 flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-6 py-4 text-xl font-bold text-neutral-950 shadow-xl transition-all hover:bg-white/90 active:scale-[0.98]"
+          >
+            ✓ הבנתי
+          </button>
         </div>
       </div>
     </button>
