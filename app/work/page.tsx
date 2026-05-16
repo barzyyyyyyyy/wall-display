@@ -5,6 +5,7 @@ import PageHeader from "@/app/components/PageHeader";
 import LiveTime from "@/app/components/LiveTime";
 import { DEFAULT_WORK, type WorkShift, type WorkState } from "@/lib/work";
 import { useSharedState } from "@/lib/use-shared-state";
+import LocalScanTest from "./LocalScanTest";
 
 const DAY_NAMES = [
   "יום ראשון",
@@ -357,6 +358,22 @@ export default function WorkPage() {
               </p>
             </div>
           )}
+
+          <LocalScanTest
+            onAcceptShifts={(shifts) =>
+              setState({ shifts, updatedAt: Date.now() })
+            }
+          />
+        </div>
+      )}
+
+      {state.shifts.length === 0 && !uploading && (
+        <div className="mt-4 w-full max-w-2xl">
+          <LocalScanTest
+            onAcceptShifts={(shifts) =>
+              setState({ shifts, updatedAt: Date.now() })
+            }
+          />
         </div>
       )}
     </main>
