@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import PageHeader from "@/app/components/PageHeader";
+import LiveTime from "@/app/components/LiveTime";
 import { DEFAULT_SCHOOL_CONFIG } from "@/lib/storage";
 import type {
   Schedule,
@@ -79,7 +80,13 @@ export default function SchoolPage() {
 
   return (
     <main className="relative flex min-w-0 flex-1 flex-col p-3 sm:p-4">
-      <PageHeader title="בית ספר 📚" accent="amber" />
+      <PageHeader
+        title="בית ספר 📚"
+        accent="amber"
+        extra={
+          <LiveTime className="text-base font-medium text-white/70" />
+        }
+      />
       <div className="grid flex-1 grid-cols-1 gap-3 min-h-0 overflow-y-auto sm:grid-cols-2 sm:gap-4 sm:overflow-visible">
         {(["right", "left"] as const).map((slot) => (
           <SiblingColumn

@@ -14,9 +14,11 @@ const accentDot: Record<Accent, string> = {
 export default function PageHeader({
   title,
   accent = "neutral",
+  extra,
 }: {
   title: string;
   accent?: Accent;
+  extra?: React.ReactNode;
 }) {
   return (
     <header className="flex items-center justify-between px-2 pb-3">
@@ -44,7 +46,7 @@ export default function PageHeader({
         />
         {title}
       </h1>
-      <div className="w-11" />
+      <div className="flex h-11 min-w-11 items-center justify-end">{extra}</div>
     </header>
   );
 }

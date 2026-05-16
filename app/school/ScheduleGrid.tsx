@@ -35,6 +35,25 @@ function statusOf(l: LessonWithTimes, nowMin: number): Status {
   return "current";
 }
 
+/** Find which day to show — today, or the next day that has lessons. */
+function pickDay(
+  schedule: Schedule,
+  today: number,
+): { day: number; lessons: Lesson[]; isToday: boolean } {
+  const todayLessons = schedule.lessons.filter((l) => l.day === today);
+  if (todayLessons.length > 0) {
+    return { day: today, lessons: todayLessons, isToday: true };
+  }
+  for (let i = 1; i <= 7; i++) {
+    const d = (today + i) % 7;
+    const next = schedule.lessons.filter((l) => l.day === d);
+    if (next.length > 0) {
+      return { day: d, lessons: next, isToday: false };
+    }
+  }
+  return { day: today, lessons: [], isToday: true };
+}
+
 export default function ScheduleGrid({ schedule }: { schedule: Schedule }) {
   const [now, setNow] = useState<Date | null>(null);
 
@@ -47,13 +66,13 @@ export default function ScheduleGrid({ schedule }: { schedule: Schedule }) {
   if (!now) return null;
 
   const today = now.getDay();
-  const todayLessons = schedule.lessons
-    .filter((l) => l.day === today)
+  const picked = pickDay(schedule, today);
+  const lessons = picked.lessons
     .map(enrich)
     .filter((l): l is LessonWithTimes => l !== null)
     .sort((a, b) => a.period - b.period);
 
-  if (todayLessons.length === 0) {
+  if (lessons.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
         <p className="text-3xl text-white/70">אין שיעורים</p>
@@ -66,10 +85,21 @@ export default function ScheduleGrid({ schedule }: { schedule: Schedule }) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <p className="mb-2 px-1 text-sm text-white/40">{DAY_NAMES[today]}</p>
+      <p className="mb-2 px-1 text-sm text-white/50">
+        {picked.isToday ? (
+          DAY_NAMES[picked.day]
+        ) : (
+          <>
+            <span className="text-amber-200/80">לא היום ·</span>{" "}
+            {DAY_NAMES[picked.day]}
+          </>
+        )}
+      </p>
       <div className="grid min-h-0 flex-1 auto-rows-fr gap-2">
-        {todayLessons.map((lesson) => {
-          const status = statusOf(lesson, nowMin);
+        {lessons.map((lesson) => {
+          const status: Status = picked.isToday
+            ? statusOf(lesson, nowMin)
+            : "upcoming";
           return (
             <LessonRow key={lesson.period} lesson={lesson} status={status} />
           );
@@ -108,8 +138,12 @@ function LessonRow({
         )}
       </div>
       <div className="flex flex-col items-end text-base tabular-nums opacity-80">
-        <span dir="ltr" className="font-medium">{lesson.start}</span>
-        <span dir="ltr" className="text-sm opacity-60">{lesson.end}</span>
+        <span dir="ltr" className="font-medium">
+          {lesson.start}
+        </span>
+        <span dir="ltr" className="text-sm opacity-60">
+          {lesson.end}
+        </span>
       </div>
       {status === "current" && (
         <span className="ml-1 inline-flex items-center gap-1.5 rounded-full bg-emerald-400/25 px-3 py-1.5 text-xs font-medium text-emerald-100 ring-1 ring-emerald-400/40">
