@@ -4,6 +4,16 @@ import { useEffect, useState } from "react";
 import type { Lesson, Schedule } from "@/lib/types";
 import { periodTimes, toMinutes } from "@/lib/periods";
 
+const DAY_NAMES = [
+  "יום ראשון",
+  "יום שני",
+  "יום שלישי",
+  "יום רביעי",
+  "יום חמישי",
+  "יום שישי",
+  "שבת",
+];
+
 type LessonWithTimes = Lesson & { start: string; end: string };
 type Status = "past" | "current" | "upcoming";
 
@@ -36,18 +46,18 @@ export default function ScheduleGrid({ schedule }: { schedule: Schedule }) {
 
   if (!now) return null;
 
-  const lessons = schedule.lessons
+  const today = now.getDay();
+  const todayLessons = schedule.lessons
+    .filter((l) => l.day === today)
     .map(enrich)
     .filter((l): l is LessonWithTimes => l !== null)
     .sort((a, b) => a.period - b.period);
 
-  if (lessons.length === 0) {
+  if (todayLessons.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
         <p className="text-3xl text-white/70">אין שיעורים</p>
-        {schedule.dayName && (
-          <p className="text-base text-white/40">{schedule.dayName}</p>
-        )}
+        <p className="text-base text-white/40">{DAY_NAMES[today]}</p>
       </div>
     );
   }
@@ -56,11 +66,9 @@ export default function ScheduleGrid({ schedule }: { schedule: Schedule }) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {schedule.dayName && (
-        <p className="mb-2 px-1 text-sm text-white/40">{schedule.dayName}</p>
-      )}
+      <p className="mb-2 px-1 text-sm text-white/40">{DAY_NAMES[today]}</p>
       <div className="grid min-h-0 flex-1 auto-rows-fr gap-2">
-        {lessons.map((lesson) => {
+        {todayLessons.map((lesson) => {
           const status = statusOf(lesson, nowMin);
           return (
             <LessonRow key={lesson.period} lesson={lesson} status={status} />
@@ -95,20 +103,13 @@ function LessonRow({
         <div className="truncate text-3xl font-semibold leading-tight">
           {lesson.subject}
         </div>
-        <div className="flex flex-wrap gap-x-3 text-base opacity-70">
-          {lesson.teacher && <span className="truncate">{lesson.teacher}</span>}
-          {lesson.room && (
-            <span className="truncate text-sm opacity-80">{lesson.room}</span>
-          )}
-        </div>
+        {lesson.teacher && (
+          <div className="truncate text-base opacity-70">{lesson.teacher}</div>
+        )}
       </div>
       <div className="flex flex-col items-end text-base tabular-nums opacity-80">
-        <span dir="ltr" className="font-medium">
-          {lesson.start}
-        </span>
-        <span dir="ltr" className="text-sm opacity-60">
-          {lesson.end}
-        </span>
+        <span dir="ltr" className="font-medium">{lesson.start}</span>
+        <span dir="ltr" className="text-sm opacity-60">{lesson.end}</span>
       </div>
       {status === "current" && (
         <span className="ml-1 inline-flex items-center gap-1.5 rounded-full bg-emerald-400/25 px-3 py-1.5 text-xs font-medium text-emerald-100 ring-1 ring-emerald-400/40">

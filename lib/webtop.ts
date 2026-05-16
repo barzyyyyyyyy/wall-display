@@ -1,186 +1,39 @@
 import type { Lesson, Schedule } from "./types";
-import { periodTimes } from "./periods";
 
-interface ParsedRequest {
-  url: string;
-  headers: Record<string, string>;
-  body: string;
+// TODO: real Webtop integration — pending cURL captures from the user's browser.
+export async function fetchWebtopSchedule(
+  username: string,
+  _password: string,
+): Promise<Schedule> {
+  if (process.env.WEBTOP_MOCK !== "false") {
+    return mockSchedule(username);
+  }
+  throw new Error("Webtop integration not implemented yet");
 }
 
-const HE_DAY_NAMES = [
-  "",
-  "יום ראשון",
-  "יום שני",
-  "יום שלישי",
-  "יום רביעי",
-  "יום חמישי",
-  "יום שישי",
-  "שבת",
-];
-
-/** Parse a `curl` command (Chrome's "Copy as cURL (bash)" output) into pieces. */
-export function parseCurl(text: string): ParsedRequest {
-  // Strip backslash line continuations
-  const cleaned = text.replace(/\\\s*\r?\n\s*/g, " ");
-
-  // URL: first single-quoted token after `curl` (may or may not have method flags)
-  const urlMatch = cleaned.match(/\bcurl\s+(?:--?\w+\s+)*['"]([^'"]+)['"]/);
-  const url = urlMatch?.[1] ?? "";
-
-  // Headers (-H 'name: value')
-  const headers: Record<string, string> = {};
-  const headerRegex = /-H\s+['"]([^'"]+)['"]/g;
-  let m: RegExpExecArray | null;
-  while ((m = headerRegex.exec(cleaned)) !== null) {
-    const line = m[1];
-    const colon = line.indexOf(":");
-    if (colon > 0) {
-      const name = line.slice(0, colon).trim();
-      const value = line.slice(colon + 1).trim();
-      if (value) headers[name.toLowerCase()] = value;
+function mockSchedule(username: string): Schedule {
+  const subjects = [
+    "מתמטיקה",
+    "עברית",
+    "אנגלית",
+    "מדעים",
+    "היסטוריה",
+    "חינוך גופני",
+    "תנ״ך",
+    "אומנות",
+    "מוזיקה",
+    "מחשבים",
+  ];
+  const teachers = ["כהן", "לוי", "מזרחי", "פרידמן", "אברהם"];
+  const lessons: Lesson[] = [];
+  const seed = [...username].reduce((a, c) => a + c.charCodeAt(0), 0);
+  for (let day = 0; day <= 5; day++) {
+    const periods = day === 5 ? 4 : 5 + ((seed + day) % 3);
+    for (let p = 1; p <= periods; p++) {
+      const subj = subjects[(seed + day * 3 + p) % subjects.length];
+      const t = teachers[(seed + day + p) % teachers.length];
+      lessons.push({ day, period: p, subject: subj, teacher: t });
     }
   }
-
-  // Cookie can be supplied via -b 'cookie-string'
-  const cookieMatch = cleaned.match(/-b\s+['"]([^'"]+)['"]/);
-  if (cookieMatch) {
-    headers["cookie"] = cookieMatch[1];
-  }
-
-  // Body: --data-raw '...'
-  let body = "";
-  const bodyMatch = cleaned.match(/--data-raw\s+['"]([\s\S]+?)['"](?:\s|$)/);
-  if (bodyMatch) {
-    body = bodyMatch[1];
-  }
-
-  return { url, headers, body };
-}
-
-interface WebtopApiResponse {
-  status: boolean;
-  data?: {
-    allowToViewThis: boolean;
-    scheduale: Array<{
-      dayIndex: number;
-      hoursData: Array<{
-        hour: number;
-        hourName: string | null;
-        scheduale: Array<{
-          day: number;
-          hour: number;
-          subject: string;
-          teacherPrivateName?: string | null;
-          teacherLastName?: string | null;
-          room?: string | null;
-        }>;
-      }>;
-    }>;
-  };
-  message?: string | null;
-  errorId?: string | null;
-  errorDescription?: string | null;
-}
-
-function cleanSubject(s: string): string {
-  // Webtop encodes gershayim (״) as a doubled grave accent
-  return s.replace(/``/g, "״").trim();
-}
-
-function parseScheduleJson(json: WebtopApiResponse): Schedule {
-  if (!json.status || !json.data) {
-    const msg =
-      json.errorDescription ??
-      json.message ??
-      "Webtop returned an error";
-    throw new Error(msg);
-  }
-
-  const dayObj = json.data.scheduale[0];
-  if (!dayObj) {
-    return {
-      fetchedAt: Date.now(),
-      dayIndex: 0,
-      dayName: "",
-      lessons: [],
-    };
-  }
-
-  const lessons: Lesson[] = [];
-  for (const slot of dayObj.hoursData) {
-    if (!slot.scheduale || slot.scheduale.length === 0) continue;
-    const first = slot.scheduale[0];
-    const teacher = [first.teacherPrivateName, first.teacherLastName]
-      .filter((p): p is string => !!p && p.length > 0)
-      .join(" ");
-    const times = periodTimes(slot.hour);
-    lessons.push({
-      period: slot.hour,
-      subject: cleanSubject(first.subject ?? ""),
-      teacher: teacher || undefined,
-      room: first.room ?? undefined,
-      startTime: times?.start,
-      endTime: times?.end,
-    });
-  }
-
-  return {
-    fetchedAt: Date.now(),
-    dayIndex: dayObj.dayIndex,
-    dayName: HE_DAY_NAMES[dayObj.dayIndex] ?? "",
-    lessons,
-  };
-}
-
-/** Re-runs the user's captured Webtop cURL to fetch today's schedule. */
-export async function fetchWebtopScheduleFromCurl(
-  curlText: string,
-): Promise<Schedule> {
-  const parsed = parseCurl(curlText);
-  if (!parsed.url) {
-    throw new Error("Could not parse URL from cURL");
-  }
-  if (!/ShotefSchedualeDataForToday/i.test(parsed.url)) {
-    throw new Error(
-      "cURL must be for ShotefSchedualeDataForToday — copy that specific request from the Network tab",
-    );
-  }
-
-  // Drop forbidden / unsafe headers that the browser auto-sets and that
-  // Node's fetch refuses to pass through.
-  const skip = new Set([
-    "host",
-    "connection",
-    "content-length",
-    "accept-encoding",
-    "sec-ch-ua",
-    "sec-ch-ua-mobile",
-    "sec-ch-ua-platform",
-    "sec-fetch-dest",
-    "sec-fetch-mode",
-    "sec-fetch-site",
-  ]);
-  const headers: Record<string, string> = {};
-  for (const [k, v] of Object.entries(parsed.headers)) {
-    if (!skip.has(k)) headers[k] = v;
-  }
-
-  const res = await fetch(parsed.url, {
-    method: "POST",
-    headers,
-    body: parsed.body || undefined,
-    cache: "no-store",
-  });
-
-  if (res.status === 401 || res.status === 403) {
-    const e = new Error("Session expired — please update the cURL");
-    (e as Error & { tokenExpired?: boolean }).tokenExpired = true;
-    throw e;
-  }
-  if (!res.ok) {
-    throw new Error(`Webtop returned HTTP ${res.status}`);
-  }
-
-  const data = (await res.json()) as WebtopApiResponse;
-  return parseScheduleJson(data);
+  return { fetchedAt: Date.now(), lessons };
 }

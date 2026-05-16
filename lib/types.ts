@@ -1,6 +1,7 @@
 export type Sibling = {
   name: string;
-  scheduleCurl: string;
+  username: string;
+  password: string;
 };
 
 export type SchoolConfig = {
@@ -9,6 +10,7 @@ export type SchoolConfig = {
 };
 
 export type Lesson = {
+  day: number;
   period: number;
   subject: string;
   teacher?: string;
@@ -19,11 +21,9 @@ export type Lesson = {
 
 export type Schedule = {
   fetchedAt: number;
-  dayIndex: number; // 1=Sunday, 7=Saturday (Israeli convention)
-  dayName: string;
   lessons: Lesson[];
 };
 
 export type ScheduleResponse =
   | { ok: true; schedule: Schedule }
-  | { ok: false; error: string; tokenExpired?: boolean };
+  | { ok: false; error: string };
