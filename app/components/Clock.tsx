@@ -57,7 +57,9 @@ export default function Clock() {
   if (!now) {
     return (
       <div className="flex flex-col items-center">
-        <div className="text-[10rem] leading-none">&nbsp;</div>
+        <div className="text-6xl leading-none sm:text-8xl lg:text-[10rem]">
+          &nbsp;
+        </div>
       </div>
     );
   }
@@ -66,9 +68,9 @@ export default function Clock() {
   const greeting = greetingFor(now.getHours());
 
   return (
-    <div className="flex flex-col items-center text-center">
-      <div className="mb-8 flex items-center gap-4 text-5xl font-medium">
-        <span className="animate-float text-6xl drop-shadow-[0_4px_20px_rgba(255,200,140,0.4)]">
+    <div className="flex flex-col items-center text-center px-4">
+      <div className="mb-4 flex items-center gap-3 text-2xl font-medium sm:mb-6 sm:text-3xl lg:mb-8 lg:gap-4 lg:text-5xl">
+        <span className="animate-float text-3xl drop-shadow-[0_4px_20px_rgba(255,200,140,0.4)] sm:text-4xl lg:text-6xl">
           {greeting.emoji}
         </span>
         <span
@@ -77,10 +79,12 @@ export default function Clock() {
           {greeting.text}
         </span>
       </div>
-      <div className="text-[10rem] leading-none font-extralight tabular-nums tracking-tight text-white drop-shadow-[0_4px_60px_rgba(255,200,140,0.2)]">
+      <div className="text-7xl leading-none font-extralight tabular-nums tracking-tight text-white drop-shadow-[0_4px_60px_rgba(255,200,140,0.2)] sm:text-9xl lg:text-[10rem]">
         {time}
       </div>
-      <div className="mt-5 text-2xl font-light text-white/70">{date}</div>
+      <div className="mt-3 text-base font-light text-white/70 sm:mt-4 sm:text-xl lg:mt-5 lg:text-2xl">
+        {date}
+      </div>
     </div>
   );
 }

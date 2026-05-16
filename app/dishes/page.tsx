@@ -129,13 +129,14 @@ export default function DishesPage() {
   const next = state.queue[0] ?? null;
 
   return (
-    <main className="relative flex min-w-0 flex-1 flex-col p-4">
+    <main className="relative flex min-w-0 flex-1 flex-col p-3 sm:p-4">
       <PageHeader title="תור מדיח 🍽️" accent="sky" />
 
-      <div className="flex min-h-0 flex-1 gap-4">
-        <aside className="flex w-72 shrink-0 flex-col rounded-3xl bg-gradient-to-b from-sky-500/15 to-sky-500/5 ring-1 ring-sky-300/20 p-4 shadow-xl shadow-sky-900/20">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row lg:gap-4 overflow-y-auto lg:overflow-visible">
+        {/* PATTERN — appears bottom on mobile, right on desktop */}
+        <aside className="order-last flex w-full shrink-0 flex-col rounded-3xl bg-gradient-to-b from-sky-500/15 to-sky-500/5 p-3 ring-1 ring-sky-300/20 shadow-xl shadow-sky-900/20 sm:p-4 lg:order-first lg:w-72">
           <div className="mb-3 flex items-center justify-between px-1">
-            <h2 className="flex items-center gap-2 text-lg font-bold text-sky-100">
+            <h2 className="flex items-center gap-2 text-base font-bold text-sky-100 sm:text-lg">
               <span>👥</span> הקבוצה
             </h2>
             <span className="rounded-full bg-sky-400/20 px-2 py-0.5 text-xs font-medium text-sky-100">
@@ -170,12 +171,10 @@ export default function DishesPage() {
             </button>
           </div>
 
-          <ol className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1">
+          <ol className="flex min-h-0 flex-1 flex-col gap-1.5 lg:overflow-y-auto pr-1">
             {state.pattern.length === 0 && (
-              <li className="flex flex-1 items-center justify-center text-center text-sm text-white/40">
-                הקבוצה ריקה.
-                <br />
-                הוסף שמות והם יחזרו בתור.
+              <li className="flex flex-1 items-center justify-center text-center text-sm text-white/40 py-3">
+                הקבוצה ריקה.<br />הוסף שמות והם יחזרו בתור.
               </li>
             )}
             {state.pattern.map((person, idx) => (
@@ -209,40 +208,20 @@ export default function DishesPage() {
                     className="flex-1 rounded-lg bg-white/10 px-2 py-1 text-base outline-none focus:bg-white/15"
                   />
                 ) : (
-                  <span className="flex-1 truncate text-base">
-                    {person.name}
-                  </span>
+                  <span className="flex-1 truncate text-base">{person.name}</span>
                 )}
                 <div className="flex shrink-0 gap-0.5">
-                  <IconButton
-                    label="העלה"
-                    disabled={idx === 0}
-                    onClick={() => moveInPattern(person.id, -1)}
-                  >
+                  <IconButton label="העלה" disabled={idx === 0} onClick={() => moveInPattern(person.id, -1)}>
                     <path d="M18 15l-6-6-6 6" />
                   </IconButton>
-                  <IconButton
-                    label="הורד"
-                    disabled={idx === state.pattern.length - 1}
-                    onClick={() => moveInPattern(person.id, 1)}
-                  >
+                  <IconButton label="הורד" disabled={idx === state.pattern.length - 1} onClick={() => moveInPattern(person.id, 1)}>
                     <path d="M6 9l6 6 6-6" />
                   </IconButton>
-                  <IconButton
-                    label="ערוך"
-                    onClick={() =>
-                      editingId === person.id
-                        ? commitEdit("pattern")
-                        : startEdit(person)
-                    }
-                  >
+                  <IconButton label="ערוך" onClick={() => editingId === person.id ? commitEdit("pattern") : startEdit(person)}>
                     <path d="M12 20h9" />
                     <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
                   </IconButton>
-                  <IconButton
-                    label="הסר"
-                    onClick={() => removeFromPattern(person.id)}
-                  >
+                  <IconButton label="הסר" onClick={() => removeFromPattern(person.id)}>
                     <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
                   </IconButton>
                 </div>
@@ -251,16 +230,18 @@ export default function DishesPage() {
           </ol>
         </aside>
 
-        <section className="flex min-w-0 flex-1 flex-col gap-4">
+        {/* MAIN — appears top on mobile, left on desktop */}
+        <section className="order-first flex min-w-0 flex-1 flex-col gap-3 lg:order-last lg:gap-4">
+          {/* Hero */}
           <div
-            className={`flex shrink-0 flex-col items-center justify-center rounded-3xl ring-1 p-6 transition-all duration-500 ${
+            className={`flex shrink-0 flex-col items-center justify-center rounded-3xl p-4 ring-1 transition-all duration-500 sm:p-6 ${
               state.highlight
                 ? "bg-gradient-to-br from-emerald-500/25 via-green-400/10 to-emerald-500/15 ring-emerald-300/40 shadow-2xl shadow-emerald-500/20"
                 : "bg-gradient-to-br from-white/[0.08] to-white/[0.02] ring-white/10"
             }`}
           >
             <p
-              className={`mb-4 text-base font-bold uppercase tracking-[0.2em] transition-colors ${
+              className={`mb-2 text-xs font-bold uppercase tracking-[0.2em] transition-colors sm:mb-4 sm:text-base ${
                 state.highlight ? "text-emerald-200" : "text-white/50"
               }`}
             >
@@ -269,24 +250,24 @@ export default function DishesPage() {
 
             {next ? (
               <div
-                className={`mb-6 font-black tracking-tight transition-all duration-500 ${
+                className={`mb-4 font-black tracking-tight transition-all duration-500 sm:mb-6 ${
                   state.highlight
-                    ? "animate-glow-pulse text-[10rem] leading-none text-emerald-300"
-                    : "text-7xl text-white drop-shadow-[0_2px_30px_rgba(255,255,255,0.15)]"
+                    ? "animate-glow-pulse text-6xl leading-none text-emerald-300 sm:text-8xl lg:text-[10rem]"
+                    : "text-5xl text-white drop-shadow-[0_2px_30px_rgba(255,255,255,0.15)] sm:text-6xl lg:text-7xl"
                 }`}
               >
                 {next.name}
               </div>
             ) : (
-              <div className="mb-6 text-5xl text-white/30">—</div>
+              <div className="mb-4 text-3xl text-white/30 sm:mb-6 sm:text-5xl">—</div>
             )}
 
-            <div className="flex flex-wrap items-center justify-center gap-3">
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
               {next && (
                 <button
                   type="button"
                   onClick={toggleHighlight}
-                  className={`rounded-full px-7 py-3.5 text-lg font-bold ring-1 transition-all active:scale-95 ${
+                  className={`rounded-full px-4 py-2.5 text-sm font-bold ring-1 transition-all active:scale-95 sm:px-7 sm:py-3.5 sm:text-lg ${
                     state.highlight
                       ? "bg-white/10 text-white/80 ring-white/20 hover:bg-white/15"
                       : "bg-gradient-to-r from-emerald-400 to-green-500 text-emerald-950 ring-emerald-300/50 shadow-lg shadow-emerald-500/40 hover:from-emerald-300 hover:to-green-400 hover:shadow-emerald-500/60"
@@ -299,7 +280,7 @@ export default function DishesPage() {
                 <button
                   type="button"
                   onClick={advance}
-                  className="rounded-full bg-white px-6 py-3.5 text-lg font-bold text-neutral-950 shadow-md transition-all hover:bg-white/90 active:scale-95"
+                  className="rounded-full bg-white px-4 py-2.5 text-sm font-bold text-neutral-950 shadow-md transition-all hover:bg-white/90 active:scale-95 sm:px-6 sm:py-3.5 sm:text-lg"
                 >
                   סיים — הבא ⏭️
                 </button>
@@ -307,32 +288,33 @@ export default function DishesPage() {
             </div>
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col rounded-3xl bg-white/5 ring-1 ring-white/10 p-5">
-            <div className="mb-3 flex items-center justify-between px-1">
-              <h3 className="flex items-center gap-2 text-lg font-bold text-white/85">
+          {/* Big list */}
+          <div className="flex min-h-0 flex-1 flex-col rounded-3xl bg-white/5 p-3 ring-1 ring-white/10 sm:p-5">
+            <div className="mb-2 flex items-center justify-between px-1 sm:mb-3">
+              <h3 className="flex items-center gap-2 text-base font-bold text-white/85 sm:text-lg">
                 <span>🔁</span> הסדר הבא
               </h3>
-              <span className="text-xs text-white/40">
+              <span className="text-xs text-white/40 hidden sm:inline">
                 שינוי בקבוצה יאפס את הסדר
               </span>
             </div>
-            <ol className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
+            <ol className="flex min-h-0 flex-1 flex-col gap-1 sm:gap-1.5 lg:overflow-y-auto">
               {state.queue.length === 0 && (
-                <li className="flex flex-1 items-center justify-center text-white/40">
+                <li className="flex flex-1 items-center justify-center text-sm text-white/40 py-4">
                   הוסף שמות לקבוצה כדי לראות את התור
                 </li>
               )}
               {state.queue.map((p, i) => (
                 <li
                   key={p.id}
-                  className={`flex items-center gap-3 rounded-2xl px-4 py-2.5 ring-1 transition-all ${
+                  className={`flex items-center gap-2 rounded-xl px-3 py-2 ring-1 transition-all sm:gap-3 sm:rounded-2xl sm:px-4 sm:py-2.5 ${
                     i === 0
                       ? "bg-gradient-to-r from-emerald-400/25 to-emerald-400/10 ring-emerald-300/40 shadow-md shadow-emerald-500/15"
                       : "bg-white/[0.05] ring-white/10"
                   }`}
                 >
                   <div
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-extrabold tabular-nums ${
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-extrabold tabular-nums sm:h-9 sm:w-9 sm:rounded-xl sm:text-sm ${
                       i === 0
                         ? "bg-gradient-to-br from-emerald-300 to-green-400 text-emerald-950 shadow-md shadow-emerald-500/40"
                         : "bg-white/10 text-white/70"
@@ -350,54 +332,36 @@ export default function DishesPage() {
                       }}
                       onBlur={() => commitEdit("queue")}
                       autoFocus
-                      className="flex-1 rounded-lg bg-white/10 px-2 py-1 text-lg outline-none focus:bg-white/15"
+                      className="flex-1 rounded-lg bg-white/10 px-2 py-1 text-base outline-none focus:bg-white/15 sm:text-lg"
                     />
                   ) : (
                     <span
                       className={`flex-1 truncate ${
                         i === 0
-                          ? "text-xl font-bold text-emerald-50"
-                          : "text-lg text-white/90"
+                          ? "text-base font-bold text-emerald-50 sm:text-xl"
+                          : "text-sm text-white/90 sm:text-lg"
                       }`}
                     >
                       {p.name}
                     </span>
                   )}
                   {i === 0 && editingId !== p.id && (
-                    <span className="rounded-full bg-emerald-400/30 px-2.5 py-0.5 text-xs font-bold text-emerald-100 ring-1 ring-emerald-300/40">
+                    <span className="hidden rounded-full bg-emerald-400/30 px-2.5 py-0.5 text-xs font-bold text-emerald-100 ring-1 ring-emerald-300/40 sm:inline">
                       ⭐ הבא
                     </span>
                   )}
                   <div className="flex shrink-0 gap-0.5">
-                    <IconButton
-                      label="העלה"
-                      disabled={i === 0}
-                      onClick={() => moveInQueue(p.id, -1)}
-                    >
+                    <IconButton label="העלה" disabled={i === 0} onClick={() => moveInQueue(p.id, -1)}>
                       <path d="M18 15l-6-6-6 6" />
                     </IconButton>
-                    <IconButton
-                      label="הורד"
-                      disabled={i === state.queue.length - 1}
-                      onClick={() => moveInQueue(p.id, 1)}
-                    >
+                    <IconButton label="הורד" disabled={i === state.queue.length - 1} onClick={() => moveInQueue(p.id, 1)}>
                       <path d="M6 9l6 6 6-6" />
                     </IconButton>
-                    <IconButton
-                      label="ערוך"
-                      onClick={() =>
-                        editingId === p.id
-                          ? commitEdit("queue")
-                          : startEdit(p)
-                      }
-                    >
+                    <IconButton label="ערוך" onClick={() => editingId === p.id ? commitEdit("queue") : startEdit(p)}>
                       <path d="M12 20h9" />
                       <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
                     </IconButton>
-                    <IconButton
-                      label="הסר"
-                      onClick={() => removeFromQueue(p.id)}
-                    >
+                    <IconButton label="הסר" onClick={() => removeFromQueue(p.id)}>
                       <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
                     </IconButton>
                   </div>

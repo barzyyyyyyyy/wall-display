@@ -78,9 +78,9 @@ export default function SchoolPage() {
   };
 
   return (
-    <main className="relative flex min-w-0 flex-1 flex-col p-4">
+    <main className="relative flex min-w-0 flex-1 flex-col p-3 sm:p-4">
       <PageHeader title="בית ספר 📚" accent="amber" />
-      <div className="grid flex-1 grid-cols-2 gap-4 min-h-0">
+      <div className="grid flex-1 grid-cols-1 gap-3 min-h-0 overflow-y-auto sm:grid-cols-2 sm:gap-4 sm:overflow-visible">
         {(["right", "left"] as const).map((slot) => (
           <SiblingColumn
             key={slot}

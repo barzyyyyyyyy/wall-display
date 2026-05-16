@@ -50,10 +50,11 @@ export default function ShoppingPage() {
   };
 
   return (
-    <main className="relative flex min-w-0 flex-1 flex-col p-4">
+    <main className="relative flex min-w-0 flex-1 flex-col p-3 sm:p-4">
       <PageHeader title="רשימת קניות 🛒" accent="emerald" />
 
-      <section className="flex min-h-0 flex-1 flex-col rounded-3xl bg-white/5 ring-1 ring-white/10 p-5">
+      {/* Items list — main focus, grows to fill */}
+      <section className="flex min-h-0 flex-1 flex-col rounded-3xl bg-white/5 p-3 ring-1 ring-white/10 sm:p-5">
         <div className="mb-3 flex items-center gap-2">
           <input
             value={input}
@@ -65,7 +66,7 @@ export default function ShoppingPage() {
               }
             }}
             placeholder="הוסף פריט…"
-            className="flex-1 rounded-2xl bg-white/10 px-5 py-3 text-lg outline-none focus:bg-white/15"
+            className="flex-1 rounded-2xl bg-white/10 px-4 py-2.5 text-base outline-none focus:bg-white/15 sm:px-5 sm:py-3 sm:text-lg"
           />
           <button
             type="button"
@@ -74,7 +75,7 @@ export default function ShoppingPage() {
               setInput("");
             }}
             disabled={!input.trim()}
-            className="rounded-2xl bg-gradient-to-br from-emerald-400 to-green-500 px-5 py-3 text-lg font-bold text-emerald-950 shadow-md shadow-emerald-500/30 transition-all hover:from-emerald-300 hover:to-green-400 active:scale-95 disabled:opacity-40"
+            className="rounded-2xl bg-gradient-to-br from-emerald-400 to-green-500 px-4 py-2.5 text-base font-bold text-emerald-950 shadow-md shadow-emerald-500/30 transition-all hover:from-emerald-300 hover:to-green-400 active:scale-95 disabled:opacity-40 sm:px-5 sm:py-3 sm:text-lg"
           >
             הוסף
           </button>
@@ -82,7 +83,7 @@ export default function ShoppingPage() {
             <button
               type="button"
               onClick={clearAll}
-              className="rounded-2xl bg-white/10 px-4 py-3 text-sm text-white/60 hover:bg-white/20 hover:text-white"
+              className="rounded-2xl bg-white/10 px-3 py-2.5 text-sm text-white/60 hover:bg-white/20 hover:text-white sm:px-4 sm:py-3"
               aria-label="נקה הכל"
             >
               נקה
@@ -90,9 +91,9 @@ export default function ShoppingPage() {
           )}
         </div>
 
-        <ul className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
+        <ul className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1 sm:gap-2">
           {loaded && state.items.length === 0 && (
-            <li className="flex flex-1 items-center justify-center text-white/40">
+            <li className="flex flex-1 items-center justify-center px-4 text-center text-sm text-white/40 sm:text-base">
               אין פריטים. לחץ על אחד למטה כדי להוסיף.
             </li>
           )}
@@ -106,21 +107,24 @@ export default function ShoppingPage() {
         </ul>
       </section>
 
-      <section className="mt-4 rounded-3xl bg-white/5 ring-1 ring-white/10 p-5">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-medium text-white/70">פריטים נפוצים</h2>
+      {/* Common items pile — bounded height on mobile so items list stays prominent */}
+      <section className="mt-3 flex max-h-[40vh] shrink-0 flex-col rounded-3xl bg-white/5 p-3 ring-1 ring-white/10 sm:mt-4 sm:max-h-[45vh] sm:p-5 lg:max-h-[35vh]">
+        <div className="mb-2 flex items-center justify-between sm:mb-3">
+          <h2 className="text-sm font-medium text-white/70 sm:text-base">
+            פריטים נפוצים
+          </h2>
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => setShowAddCommon((v) => !v)}
-              className="rounded-full bg-white/10 px-3 py-1.5 text-sm hover:bg-white/20"
+              className="rounded-full bg-white/10 px-3 py-1.5 text-xs hover:bg-white/20 sm:text-sm"
             >
               {showAddCommon ? "ביטול" : "+ חדש"}
             </button>
             <button
               type="button"
               onClick={() => setEditingPile((v) => !v)}
-              className="rounded-full bg-white/10 px-3 py-1.5 text-sm hover:bg-white/20"
+              className="rounded-full bg-white/10 px-3 py-1.5 text-xs hover:bg-white/20 sm:text-sm"
             >
               {editingPile ? "סיום" : "ערוך"}
             </button>
@@ -158,7 +162,7 @@ export default function ShoppingPage() {
           </div>
         )}
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex min-h-0 flex-1 flex-wrap content-start gap-1.5 overflow-y-auto sm:gap-2">
           {state.common.map((name) => (
             <CommonChip
               key={name}
@@ -182,8 +186,8 @@ function ItemRow({
   onRemove: () => void;
 }) {
   return (
-    <li className="flex items-center gap-3 rounded-2xl bg-white/[0.06] px-5 py-3.5 ring-1 ring-white/10">
-      <span className="flex-1 text-xl">{item.text}</span>
+    <li className="flex items-center gap-3 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10 sm:px-5 sm:py-3.5">
+      <span className="flex-1 text-base sm:text-xl">{item.text}</span>
       <button
         type="button"
         onClick={onRemove}
@@ -222,12 +226,12 @@ function CommonChip({
       <button
         type="button"
         onClick={onRemove}
-        className="flex items-center gap-1.5 rounded-full bg-red-500/15 px-4 py-2 text-base text-red-200 ring-1 ring-red-400/30 hover:bg-red-500/25"
+        className="flex items-center gap-1.5 rounded-full bg-red-500/15 px-3 py-1.5 text-sm text-red-200 ring-1 ring-red-400/30 hover:bg-red-500/25 sm:px-4 sm:py-2 sm:text-base"
       >
         <svg
           viewBox="0 0 24 24"
-          width="14"
-          height="14"
+          width="12"
+          height="12"
           fill="none"
           stroke="currentColor"
           strokeWidth="2.5"
@@ -243,7 +247,7 @@ function CommonChip({
     <button
       type="button"
       onClick={onAdd}
-      className="rounded-full bg-emerald-400/15 px-4 py-2 text-base text-emerald-50 ring-1 ring-emerald-300/30 transition-all hover:bg-emerald-400/25 active:scale-95"
+      className="rounded-full bg-emerald-400/15 px-3 py-1.5 text-sm text-emerald-50 ring-1 ring-emerald-300/30 transition-all hover:bg-emerald-400/25 active:scale-95 sm:px-4 sm:py-2 sm:text-base"
     >
       {name}
     </button>
