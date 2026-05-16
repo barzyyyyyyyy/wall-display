@@ -594,6 +594,21 @@ export default function DishesPage() {
 }
 
 function WhatsAppHelpModal({ onClose }: { onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
+
+  const copyActivation = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(
+        "I allow callmebot to send me messages",
+      );
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard not available, ignore */
+    }
+  };
+
   return (
     <button
       type="button"
@@ -701,13 +716,20 @@ function WhatsAppHelpModal({ onClose }: { onClose: () => void }) {
                 <div className="flex-1 leading-relaxed text-white/80">
                   פתח WhatsApp ושלח לאיש הקשר הזה את ההודעה הבאה{" "}
                   <span className="font-bold">בדיוק</span> (באנגלית):
-                  <div className="mt-2">
+                  <div className="relative mt-2">
                     <code
-                      className="block rounded-xl bg-emerald-500/15 px-4 py-3 font-mono text-base text-emerald-100 ring-1 ring-emerald-400/30 sm:text-lg"
+                      className="block rounded-xl bg-emerald-500/15 px-4 py-3 pr-24 font-mono text-base text-emerald-100 ring-1 ring-emerald-400/30 sm:text-lg"
                       dir="ltr"
                     >
                       I allow callmebot to send me messages
                     </code>
+                    <button
+                      type="button"
+                      onClick={copyActivation}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg bg-emerald-400/25 px-3 py-1.5 text-xs font-bold text-emerald-50 ring-1 ring-emerald-300/40 transition-all hover:bg-emerald-400/40 active:scale-95"
+                    >
+                      {copied ? "✓ הועתק" : "העתק"}
+                    </button>
                   </div>
                 </div>
               </li>
