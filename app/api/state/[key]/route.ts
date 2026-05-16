@@ -4,7 +4,7 @@ import { hasRedis, redis } from "@/lib/redis";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const VALID_KEYS = new Set(["shopping", "dishes", "school", "work", "messages"]);
+const VALID_KEYS = new Set(["shopping", "dishes", "school", "work"]);
 
 function keyOf(name: string) {
   return `state:${name}`;
