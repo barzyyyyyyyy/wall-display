@@ -17,13 +17,26 @@ type UploadBody = {
   replaceAll?: boolean;
 };
 
+// Coerce any previously-stored value into a Sibling shape with a real
+// lessons array. Handles the older { name, username, password } format too.
+function normalizeSibling(value: unknown): Sibling | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  const name = typeof v.name === "string" ? v.name : "";
+  const lessons = Array.isArray(v.lessons) ? (v.lessons as Lesson[]) : [];
+  return { name, lessons };
+}
+
 export async function POST(req: Request) {
   const auth = req.headers.get("x-sync-secret");
   if (!process.env.SYNC_SECRET || auth !== process.env.SYNC_SECRET) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   if (!hasRedis() || !redis) {
-    return NextResponse.json({ error: "no db" }, { status: 500 });
+    return NextResponse.json(
+      { error: "database not configured" },
+      { status: 500 },
+    );
   }
 
   let body: UploadBody;
@@ -47,43 +60,57 @@ export async function POST(req: Request) {
     );
   }
 
-  // Load existing config
-  let existing: SchoolConfig = { left: null, right: null };
   try {
+    // Load and normalize existing config (handles legacy shapes).
+    let existing: SchoolConfig = { left: null, right: null };
     const raw = await redis.get(STATE_KEY);
     if (raw) {
-      existing = (typeof raw === "string" ? JSON.parse(raw) : raw) as SchoolConfig;
+      const parsed =
+        typeof raw === "string" ? JSON.parse(raw) : (raw as unknown);
+      if (parsed && typeof parsed === "object") {
+        const p = parsed as Record<string, unknown>;
+        existing = {
+          left: normalizeSibling(p.left),
+          right: normalizeSibling(p.right),
+        };
+      }
     }
-  } catch {
-    /* fall through with empty config */
+
+    const current: Sibling | null = existing[slot];
+
+    let mergedLessons: Lesson[];
+    if (replaceAll || !current) {
+      mergedLessons = lessons;
+    } else {
+      const replacedDays = new Set(lessons.map((l) => l.day));
+      mergedLessons = [
+        ...current.lessons.filter((l) => !replacedDays.has(l.day)),
+        ...lessons,
+      ];
+    }
+
+    const next: SchoolConfig = {
+      ...existing,
+      [slot]: {
+        name: name ?? current?.name ?? "",
+        lessons: mergedLessons,
+      },
+    };
+
+    await redis.set(STATE_KEY, JSON.stringify(next));
+
+    return NextResponse.json({
+      ok: true,
+      slot,
+      name: next[slot]?.name,
+      lessonsInPayload: lessons.length,
+      totalLessons: mergedLessons.length,
+    });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "unknown error";
+    return NextResponse.json(
+      { error: `upload failed: ${message}` },
+      { status: 500 },
+    );
   }
-
-  const current: Sibling | null = existing[slot];
-
-  let mergedLessons: Lesson[];
-  if (replaceAll || !current) {
-    mergedLessons = lessons;
-  } else {
-    // Replace only the days present in the new payload
-    const replacedDays = new Set(lessons.map((l) => l.day));
-    mergedLessons = [
-      ...current.lessons.filter((l) => !replacedDays.has(l.day)),
-      ...lessons,
-    ];
-  }
-
-  const next: SchoolConfig = {
-    ...existing,
-    [slot]: { name: name ?? current?.name ?? "", lessons: mergedLessons },
-  };
-
-  await redis.set(STATE_KEY, JSON.stringify(next));
-
-  return NextResponse.json({
-    ok: true,
-    slot,
-    name: next[slot]?.name,
-    lessonsInPayload: lessons.length,
-    totalLessons: mergedLessons.length,
-  });
 }
