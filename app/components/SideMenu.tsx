@@ -53,6 +53,14 @@ const items: MenuItem[] = [
       "bg-gradient-to-br from-violet-400/40 to-purple-500/30 ring-violet-300/40 shadow-violet-500/20",
     activeRing: "ring-violet-300/50 shadow-violet-500/20",
   },
+  {
+    href: "/skincare",
+    label: "טיפול פנים",
+    icon: "🧴",
+    iconBg:
+      "bg-gradient-to-br from-fuchsia-400/40 to-pink-500/30 ring-pink-300/40 shadow-pink-500/20",
+    activeRing: "ring-pink-300/50 shadow-pink-500/20",
+  },
 ];
 
 export default function SideMenu() {

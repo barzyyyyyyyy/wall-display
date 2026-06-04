@@ -1,6 +1,13 @@
 import Link from "next/link";
 
-type Accent = "amber" | "emerald" | "sky" | "violet" | "orange" | "neutral";
+type Accent =
+  | "amber"
+  | "emerald"
+  | "sky"
+  | "violet"
+  | "orange"
+  | "pink"
+  | "neutral";
 
 const accentDot: Record<Accent, string> = {
   amber:
@@ -12,6 +19,7 @@ const accentDot: Record<Accent, string> = {
     "bg-gradient-to-br from-violet-300 to-purple-400 shadow-[0_0_16px_rgba(196,181,253,0.7)]",
   orange:
     "bg-gradient-to-br from-orange-300 to-red-400 shadow-[0_0_16px_rgba(253,186,116,0.7)]",
+  pink: "bg-gradient-to-br from-fuchsia-300 to-pink-400 shadow-[0_0_16px_rgba(244,114,182,0.7)]",
   neutral: "bg-white/60",
 };
 
