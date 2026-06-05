@@ -10,6 +10,7 @@ const VALID_KEYS = new Set([
   "school",
   "work",
   "skincare",
+  "recipes",
 ]);
 
 function keyOf(name: string) {

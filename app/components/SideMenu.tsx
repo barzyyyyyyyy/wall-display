@@ -61,6 +61,14 @@ const items: MenuItem[] = [
       "bg-gradient-to-br from-fuchsia-400/40 to-pink-500/30 ring-pink-300/40 shadow-pink-500/20",
     activeRing: "ring-pink-300/50 shadow-pink-500/20",
   },
+  {
+    href: "/recipes",
+    label: "מתכונים",
+    icon: "🍳",
+    iconBg:
+      "bg-gradient-to-br from-orange-400/40 to-red-500/30 ring-orange-300/40 shadow-orange-500/20",
+    activeRing: "ring-orange-300/50 shadow-orange-500/20",
+  },
 ];
 
 export default function SideMenu() {
