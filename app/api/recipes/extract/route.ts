@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { callGemini, type GeminiPart } from "@/lib/gemini";
+import {
+  callGemini,
+  type GeminiPart,
+  MODEL_ATTEMPTS_PRO,
+} from "@/lib/gemini";
 import type { ExtractedRecipe } from "@/lib/recipes";
 
 export const runtime = "nodejs";
@@ -8,11 +12,17 @@ export const maxDuration = 60;
 
 const PROMPT = `You are extracting a recipe from a source. A real human will COOK from your output — wrong ingredients can ruin food or worse.
 
+The source may be handwritten Hebrew, which is often hard to read. THIS IS THE MOST IMPORTANT INSTRUCTION:
+
+⚠️ IF YOU CANNOT READ THE HANDWRITING WITH CONFIDENCE, OR IF THE DISH NAME / KEY INGREDIENTS ARE UNCLEAR, DO NOT GUESS — return {"error":"handwriting unclear","note":"<briefly what you tried to read>"}.
+
+Inventing a plausible-looking recipe from a misread source has caused real failures. NEVER substitute ingredients you'd "expect" for a dish you assume it is. NEVER fall back to a common recipe of the same kind.
+
 Return ONLY this JSON object (no markdown, no commentary):
 
 {"name":"...","ingredients":["..."],"instructions":["..."],"time":null,"servings":null}
 
-ABSOLUTE RULES — read every one before answering:
+If you ARE confident, follow these rules:
 
 1. Copy ingredients VERBATIM from the source. Exact quantity, exact unit, exact product name. Examples: "2 כוסות קמח", "1/2 כפית מלח", "100 גרם חמאה רכה".
 2. Include EVERY ingredient that appears in the source — salt, oil, water, garnishes. Do not skip even minor ones.
@@ -20,8 +30,7 @@ ABSOLUTE RULES — read every one before answering:
 4. Preserve the original language and spelling of the source (likely Hebrew).
 5. If multiple recipes are present, extract ONLY the main/featured one. Do not mix ingredients from different recipes.
 6. "time" and "servings" are STRINGS — fill only if the source EXPLICITLY states them; otherwise null.
-7. ⚠️ DO NOT INVENT OR GUESS. Do not "fill in" plausible ingredients you'd expect for the dish. If the source is missing pieces, return {"error":"incomplete source"}.
-8. If no recipe at all is present, return {"error":"no recipe found"}.
+7. If you are unsure about a SINGLE ingredient or step, prefix it with "?" — better an uncertain item than a wrong one.
 
 You will be evaluated on exact match to the source. Inventing content is worse than refusing.`;
 
@@ -241,7 +250,11 @@ export async function POST(req: Request) {
 
       const text = await callGemini(
         [{ text: `${PROMPT}\n\nWebpage text:\n${pageText}` }],
-        { temperature: 0, responseMimeType: "application/json" },
+        {
+          temperature: 0,
+          responseMimeType: "application/json",
+          models: MODEL_ATTEMPTS_PRO,
+        },
       );
       const parsed = parseGeminiJson(text);
       if (!parsed) {
@@ -291,7 +304,11 @@ export async function POST(req: Request) {
           { text: PROMPT },
           { inline_data: { mime_type: mimeType, data: image } },
         ],
-        { temperature: 0, responseMimeType: "application/json" },
+        {
+          temperature: 0,
+          responseMimeType: "application/json",
+          models: MODEL_ATTEMPTS_PRO,
+        },
       );
       const parsed = parseGeminiJson(text);
       if (!parsed) {

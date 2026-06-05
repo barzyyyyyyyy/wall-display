@@ -12,17 +12,27 @@ export type GenerationConfig = {
   maxOutputTokens?: number;
   /** When set, forces the model to return content matching this MIME type. */
   responseMimeType?: string;
+  /** Explicit model fallback chain. Defaults to MODEL_ATTEMPTS_FLASH. */
+  models?: string[];
 };
 
 const RETRY_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
 
-// Tried in order. The main model first, then progressively-cheaper fallbacks
-// that tend to have spare capacity when 2.5-flash is overloaded.
-const MODEL_ATTEMPTS: string[] = [
+// Default chain — for routine extraction (work, skincare). Flash is cheap and
+// has a huge free quota.
+const MODEL_ATTEMPTS_FLASH: string[] = [
   "gemini-2.5-flash",
   "gemini-2.5-flash",
   "gemini-2.5-flash",
   "gemini-2.5-flash-lite",
+];
+
+/** High-accuracy chain for cases where hallucinating is dangerous (recipes).
+ *  Pro is much better at handwriting and at refusing rather than confabulating. */
+export const MODEL_ATTEMPTS_PRO: string[] = [
+  "gemini-2.5-pro",
+  "gemini-2.5-pro",
+  "gemini-2.5-flash",
 ];
 
 function sleep(ms: number): Promise<void> {
@@ -55,16 +65,18 @@ export async function callGemini(
     body.generationConfig = generationConfig;
   }
 
+  const models = config.models ?? MODEL_ATTEMPTS_FLASH;
+
   let lastStatus = 0;
   let lastBody = "";
 
-  for (let i = 0; i < MODEL_ATTEMPTS.length; i++) {
+  for (let i = 0; i < models.length; i++) {
     if (i > 0) {
       // Backoff: 0.5s, 1s, 1.5s
       await sleep(500 * Math.min(i, 3));
     }
 
-    const model = MODEL_ATTEMPTS[i];
+    const model = models[i];
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     const res = await fetch(url, {
       method: "POST",
