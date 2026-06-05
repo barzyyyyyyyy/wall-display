@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
+import { callGemini, type GeminiPart } from "@/lib/gemini";
 import type { ExtractedRecipe } from "@/lib/recipes";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 const PROMPT = `You are extracting a recipe. Accuracy is CRITICAL — wrong measurements can ruin the food.
 
@@ -134,31 +135,7 @@ async function fetchPageText(url: string): Promise<{ html: string; text: string 
   return { html, text: text.slice(0, 30_000) };
 }
 
-// ---------- Gemini fallback ----------
-
-type GeminiPart =
-  | { text: string }
-  | { inline_data: { mime_type: string; data: string } };
-
-async function callGemini(parts: GeminiPart[]): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY not configured on the server");
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ contents: [{ parts }] }),
-  });
-  if (!res.ok) {
-    const t = await res.text().catch(() => "");
-    throw new Error(`Gemini HTTP ${res.status}: ${t.slice(0, 250)}`);
-  }
-  const data = (await res.json()) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-  };
-  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-}
+// ---------- Gemini fallback (uses shared lib/gemini.ts) ----------
 
 function parseGeminiJson(text: string): Record<string, unknown> | null {
   const match = text.match(/\{[\s\S]*\}/);

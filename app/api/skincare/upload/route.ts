@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
+import { callGemini } from "@/lib/gemini";
 import type { SkincareSteps } from "@/lib/skincare";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 const PROMPT = `You are looking at a skincare routine (likely written in Hebrew). It defines steps for FOUR phases of a 2-day rotation:
 
@@ -25,14 +26,6 @@ Rules:
 - Don't invent steps that aren't in the image.`;
 
 export async function POST(req: Request) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json(
-      { ok: false, error: "GEMINI_API_KEY not configured on the server" },
-      { status: 500 },
-    );
-  }
-
   let body: { image?: string; mimeType?: string };
   try {
     body = await req.json();
@@ -53,34 +46,10 @@ export async function POST(req: Request) {
   }
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: PROMPT },
-              { inline_data: { mime_type: mimeType, data: image } },
-            ],
-          },
-        ],
-      }),
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      return NextResponse.json(
-        { ok: false, error: `Gemini HTTP ${res.status}: ${text.slice(0, 300)}` },
-        { status: 500 },
-      );
-    }
-
-    const data = (await res.json()) as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    };
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    const text = await callGemini([
+      { text: PROMPT },
+      { inline_data: { mime_type: mimeType, data: image } },
+    ]);
 
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) {
