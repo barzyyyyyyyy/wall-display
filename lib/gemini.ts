@@ -5,6 +5,15 @@ export type GeminiPart =
   | { text: string }
   | { inline_data: { mime_type: string; data: string } };
 
+export type GenerationConfig = {
+  temperature?: number;
+  topP?: number;
+  topK?: number;
+  maxOutputTokens?: number;
+  /** When set, forces the model to return content matching this MIME type. */
+  responseMimeType?: string;
+};
+
 const RETRY_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
 
 // Tried in order. The main model first, then progressively-cheaper fallbacks
@@ -20,10 +29,30 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function callGemini(parts: GeminiPart[]): Promise<string> {
+export async function callGemini(
+  parts: GeminiPart[],
+  config: GenerationConfig = {},
+): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY not configured on the server");
+  }
+
+  const generationConfig: Record<string, unknown> = {};
+  if (typeof config.temperature === "number")
+    generationConfig.temperature = config.temperature;
+  if (typeof config.topP === "number") generationConfig.topP = config.topP;
+  if (typeof config.topK === "number") generationConfig.topK = config.topK;
+  if (typeof config.maxOutputTokens === "number")
+    generationConfig.maxOutputTokens = config.maxOutputTokens;
+  if (config.responseMimeType)
+    generationConfig.response_mime_type = config.responseMimeType;
+
+  const body: Record<string, unknown> = {
+    contents: [{ parts }],
+  };
+  if (Object.keys(generationConfig).length > 0) {
+    body.generationConfig = generationConfig;
   }
 
   let lastStatus = 0;
@@ -40,7 +69,7 @@ export async function callGemini(parts: GeminiPart[]): Promise<string> {
     const res = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ contents: [{ parts }] }),
+      body: JSON.stringify(body),
     });
 
     if (res.ok) {

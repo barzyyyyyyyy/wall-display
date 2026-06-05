@@ -6,20 +6,24 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const PROMPT = `You are extracting a recipe. Accuracy is CRITICAL — wrong measurements can ruin the food.
+const PROMPT = `You are extracting a recipe from a source. A real human will COOK from your output — wrong ingredients can ruin food or worse.
 
-Return ONLY this JSON object (no markdown fences, no commentary):
+Return ONLY this JSON object (no markdown, no commentary):
 
 {"name":"...","ingredients":["..."],"instructions":["..."],"time":null,"servings":null}
 
-ABSOLUTE RULES:
-- Copy ingredients with EXACT quantities and units (e.g. "2 כוסות קמח", "1/2 כפית מלח").
-- Include EVERY ingredient — don't skip salt, oil, water, garnishes.
-- Each instruction is one ordered step. Don't combine or summarize.
-- Preserve the original language (likely Hebrew).
-- If multiple recipes are present, extract ONLY the main/featured one.
-- "time" and "servings" are optional strings — null if not mentioned.
-- If no recipe is found, return {"error":"no recipe found"}.`;
+ABSOLUTE RULES — read every one before answering:
+
+1. Copy ingredients VERBATIM from the source. Exact quantity, exact unit, exact product name. Examples: "2 כוסות קמח", "1/2 כפית מלח", "100 גרם חמאה רכה".
+2. Include EVERY ingredient that appears in the source — salt, oil, water, garnishes. Do not skip even minor ones.
+3. Copy each instruction step VERBATIM. Do not paraphrase, summarize, reorder, split, or merge.
+4. Preserve the original language and spelling of the source (likely Hebrew).
+5. If multiple recipes are present, extract ONLY the main/featured one. Do not mix ingredients from different recipes.
+6. "time" and "servings" are STRINGS — fill only if the source EXPLICITLY states them; otherwise null.
+7. ⚠️ DO NOT INVENT OR GUESS. Do not "fill in" plausible ingredients you'd expect for the dish. If the source is missing pieces, return {"error":"incomplete source"}.
+8. If no recipe at all is present, return {"error":"no recipe found"}.
+
+You will be evaluated on exact match to the source. Inventing content is worse than refusing.`;
 
 // ---------- JSON-LD parsing (works on most major recipe sites) ----------
 
@@ -216,9 +220,29 @@ export async function POST(req: Request) {
         );
       }
 
-      const text = await callGemini([
-        { text: `${PROMPT}\n\nWebpage text:\n${pageText}` },
-      ]);
+      // Sanity check: pages that didn't actually load (login walls, JS-only
+      // renderers, blocked scrapers) often produce <800 chars of stripped
+      // text with no recipe keywords. Refusing here is safer than letting
+      // Gemini invent a recipe from page chrome.
+      const hasRecipeMarker =
+        /(?:מצרכים|הוראות הכנה|אופן הכנה|recipe|ingredients|instructions|directions)/i.test(
+          pageText,
+        );
+      if (pageText.length < 800 || !hasRecipeMarker) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error:
+              "לא מצאתי מתכון בדף הזה (אולי הדף חסם את הטעינה או טוען עם JavaScript). נסה להעלות צילום מסך של המתכון במקום.",
+          },
+          { status: 422 },
+        );
+      }
+
+      const text = await callGemini(
+        [{ text: `${PROMPT}\n\nWebpage text:\n${pageText}` }],
+        { temperature: 0, responseMimeType: "application/json" },
+      );
       const parsed = parseGeminiJson(text);
       if (!parsed) {
         return NextResponse.json(
@@ -262,10 +286,13 @@ export async function POST(req: Request) {
           { status: 400 },
         );
       }
-      const text = await callGemini([
-        { text: PROMPT },
-        { inline_data: { mime_type: mimeType, data: image } },
-      ]);
+      const text = await callGemini(
+        [
+          { text: PROMPT },
+          { inline_data: { mime_type: mimeType, data: image } },
+        ],
+        { temperature: 0, responseMimeType: "application/json" },
+      );
       const parsed = parseGeminiJson(text);
       if (!parsed) {
         return NextResponse.json(
